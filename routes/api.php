@@ -8,6 +8,7 @@ use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\PromoController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\TableController;
+use App\Http\Controllers\Api\CarouselController;
 
 
 
@@ -17,6 +18,9 @@ Route::get('/menus', [MenuController::class, 'index']);
 Route::get('/menus/{id}', [MenuController::class, 'show']);
 Route::get('/tables', [TableController::class, 'index']);
 Route::get('/tables/{tableNumber}', [TableController::class, 'showByNumber']);
+
+// Carousel (read-only untuk user)
+Route::get('/carousels/active', [CarouselController::class, 'active']);
 
 // Promo validation
 Route::post('/promos/validate', [PromoController::class, 'validateCode']);

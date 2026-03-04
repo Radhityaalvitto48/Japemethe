@@ -6,7 +6,6 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\Select;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -40,12 +39,16 @@ class MenusTable
                     ->label('Stock')
                     ->sortable(),
                 TextColumn::make('description')
-                ->label('Description')
-                ->html()
-                ->limit(50)
-                ->wrap(),
-                ToggleColumn::make('status_menu')
+                    ->label('Description')
+                    ->html()
+                    ->limit(50)
+                    ->wrap(),
+                SelectColumn::make('status_menu')
                     ->label('Status Menu')
+                    ->options([
+                        'available' => 'Available',
+                        'unavailable' => 'Unavailable',
+                    ])
                     ->sortable(),
                 ToggleColumn::make('is_recommended')
                     ->label('Recommended')
