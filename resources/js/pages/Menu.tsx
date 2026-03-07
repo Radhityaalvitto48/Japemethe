@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import {
     BottomNavigation,
     CartBar,
@@ -11,10 +11,18 @@ import {
     PromoSection,
     SearchBar,
 } from '@/components/menu';
-import { type CartItem } from '@/components/menu/CartBar';
 import { getMenuImage, type Menu } from '@/components/menu/MenuGrid';
+import { TableProvider, useTable, CartProvider, useCart } from '@/contexts';
 
 // Types
+interface Table {
+    id: number;
+    table_number: string;
+    seating_type: 'lesehan' | 'kursi';
+    qr_code: string;
+    is_active: boolean;
+}
+
 interface Promo {
     id: number;
     code: string;
@@ -49,15 +57,43 @@ interface Props {
     recommendedMenus: Menu[];
     selectedCategory?: number;
     searchQuery?: string;
+    currentTable?: Table;
 }
 
-export default function MenuPage({ menus, categories, promos, banners, recommendedMenus, selectedCategory, searchQuery }: Props) {
+export default function MenuPage({ menus, categories, promos, banners, recommendedMenus, selectedCategory, searchQuery, currentTable }: Props) {
+    return (
+        <TableProvider>
+        <CartProvider>
+            <MenuPageContent
+                menus={menus}
+                categories={categories}
+                promos={promos}
+                banners={banners}
+                recommendedMenus={recommendedMenus}
+                selectedCategory={selectedCategory}
+                searchQuery={searchQuery}
+                currentTable={currentTable}
+            />
+        </CartProvider>
+        </TableProvider>
+    );
+}
+
+function MenuPageContent({ menus, categories, promos, banners, recommendedMenus, selectedCategory, searchQuery, currentTable }: Props) {
+    const { setCurrentTable } = useTable();
+    const { cart, addToCart: ctxAddToCart, setItemQuantity, increment: ctxIncrement, decrement: ctxDecrement, remove: ctxRemove, updateNote: ctxUpdateNote, totalItems: totalCartItems } = useCart();
     const [search, setSearch] = useState(searchQuery || '');
     const [activeCategory, setActiveCategory] = useState<number | null>(selectedCategory || null);
-    const [cart, setCart] = useState<CartItem[]>([]);
     const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [isCartOpen, setIsCartOpen] = useState(false);
+
+    // Set table from props if available (from scan route)
+    useEffect(() => {
+        if (currentTable) {
+            setCurrentTable(currentTable);
+        }
+    }, [currentTable, setCurrentTable]);
 
     // Handle search
     const handleSearch = (e: React.FormEvent) => {
@@ -73,28 +109,14 @@ export default function MenuPage({ menus, categories, promos, banners, recommend
 
     // Add to cart (from + button on card)
     const handleAddToCart = useCallback((menu: Menu, quantity: number = 1) => {
-        setCart((prev) => {
-            const existing = prev.find((item) => item.menuId === menu.id);
-            if (existing) {
-                return prev.map((item) =>
-                    item.menuId === menu.id
-                        ? { ...item, quantity: item.quantity + quantity }
-                        : item
-                );
-            }
-            return [
-                ...prev,
-                {
-                    menuId: menu.id,
-                    name: menu.name,
-                    price: menu.price,
-                    quantity: quantity,
-                    image: getMenuImage(menu),
-                    note: '',
-                },
-            ];
+        ctxAddToCart({
+            menuId: menu.id,
+            name: menu.name,
+            price: menu.price,
+            quantity: quantity,
+            image: getMenuImage(menu),
         });
-    }, []);
+    }, [ctxAddToCart]);
 
     // Quick add from grid + button
     const handleQuickAdd = useCallback((menu: Menu) => {
@@ -103,37 +125,23 @@ export default function MenuPage({ menus, categories, promos, banners, recommend
 
     // Increment quantity
     const handleIncrement = useCallback((menuId: number) => {
-        setCart((prev) =>
-            prev.map((item) =>
-                item.menuId === menuId ? { ...item, quantity: item.quantity + 1 } : item
-            )
-        );
-    }, []);
+        ctxIncrement(menuId);
+    }, [ctxIncrement]);
 
     // Decrement quantity (remove if qty becomes 0)
     const handleDecrement = useCallback((menuId: number) => {
-        setCart((prev) =>
-            prev
-                .map((item) =>
-                    item.menuId === menuId ? { ...item, quantity: item.quantity - 1 } : item
-                )
-                .filter((item) => item.quantity > 0)
-        );
-    }, []);
+        ctxDecrement(menuId);
+    }, [ctxDecrement]);
 
     // Remove item from cart
     const handleRemove = useCallback((menuId: number) => {
-        setCart((prev) => prev.filter((item) => item.menuId !== menuId));
-    }, []);
+        ctxRemove(menuId);
+    }, [ctxRemove]);
 
     // Update note for cart item
     const handleUpdateNote = useCallback((menuId: number, note: string) => {
-        setCart((prev) =>
-            prev.map((item) =>
-                item.menuId === menuId ? { ...item, note } : item
-            )
-        );
-    }, []);
+        ctxUpdateNote(menuId, note);
+    }, [ctxUpdateNote]);
 
     // Handle menu card click -> open detail
     const handleMenuClick = useCallback((menu: Menu) => {
@@ -149,28 +157,19 @@ export default function MenuPage({ menus, categories, promos, banners, recommend
 
     // Add to cart from detail modal (with specific quantity)
     const handleAddFromDetail = useCallback((menu: Menu, quantity: number) => {
-        setCart((prev) => {
-            const existing = prev.find((item) => item.menuId === menu.id);
-            if (existing) {
-                return prev.map((item) =>
-                    item.menuId === menu.id
-                        ? { ...item, quantity: quantity }
-                        : item
-                );
-            }
-            return [
-                ...prev,
-                {
-                    menuId: menu.id,
-                    name: menu.name,
-                    price: menu.price,
-                    quantity: quantity,
-                    image: getMenuImage(menu),
-                    note: '',
-                },
-            ];
-        });
-    }, []);
+        setItemQuantity(menu.id, quantity);
+        // If item doesn't exist yet, add it
+        const exists = cart.find((item) => item.menuId === menu.id);
+        if (!exists && quantity > 0) {
+            ctxAddToCart({
+                menuId: menu.id,
+                name: menu.name,
+                price: menu.price,
+                quantity: quantity,
+                image: getMenuImage(menu),
+            });
+        }
+    }, [setItemQuantity, cart, ctxAddToCart]);
 
     // Get current quantity in cart for a menu (for detail modal)
     const getCartQuantity = (menuId: number): number => {
@@ -182,12 +181,11 @@ export default function MenuPage({ menus, categories, promos, banners, recommend
         setIsCartOpen(true);
     }, []);
 
-    // Handle order
+    // Handle order -> navigate to cart/checkout page
     const handleOrder = useCallback(() => {
-        console.log('Order placed:', cart);
-        // TODO: send order to backend
         setIsCartOpen(false);
-    }, [cart]);
+        router.get('/cart');
+    }, []);
 
     // Handle back button
     const handleBack = () => {
@@ -198,8 +196,6 @@ export default function MenuPage({ menus, categories, promos, banners, recommend
     const handleTabClick = (tab: string) => {
         console.log('Tab clicked:', tab);
     };
-
-    const totalCartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
     return (
         <>

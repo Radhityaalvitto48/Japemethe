@@ -37,7 +37,7 @@ class Table extends Model
             }
 
             // Generate dan simpan QR code langsung dalam format SVG
-            $url = 'http://localhost:3000/scan/' . $table->table_number;
+            $url = url('/scan/' . $table->table_number);
             $svg = QrCode::format('svg')->size(300)->generate($url);
             $filename = 'table-qr/' . $table->table_number . '.svg';
             Storage::disk('public')->put($filename, $svg);

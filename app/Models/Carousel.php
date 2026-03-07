@@ -52,16 +52,11 @@ class Carousel extends Model
                 if (file_exists($imagePath)) {
                     $manager = new ImageManager(new Driver());
                     $image = $manager->read($imagePath);
-
-                    // Resize ke ratio 16:9 dengan lebar optimal untuk web (1200px untuk performa)
                     $image->coverDown(1200, 675);
-
-                    // Konversi ke WebP dengan kualitas optimal untuk LCP
                     $webpPath = preg_replace('/\.(jpg|jpeg|png)$/i', '.webp', $imagePath);
                     $encodedImage = $image->toWebp(75);
                     file_put_contents($webpPath, $encodedImage);
 
-                    // Hapus file lama jika berbeda
                     if ($imagePath !== $webpPath) {
                         unlink($imagePath);
                     }
