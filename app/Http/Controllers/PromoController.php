@@ -43,7 +43,7 @@ class PromoController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Kode promo tidak valid atau sudah kadaluarsa'
-            ], 404);
+            ]);
         }
 
         // Cek minimum price jika total_price diberikan
@@ -51,7 +51,7 @@ class PromoController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Minimum pembelian untuk promo ini adalah Rp ' . number_format($promo->minimum_price, 0, ',', '.')
-            ], 422);
+            ]);
         }
 
         // Hitung diskon

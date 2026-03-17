@@ -88,7 +88,7 @@ export default function MenuGrid({ menus, cart, onMenuClick, onAddToCart, onIncr
 
     return (
         <section className="px-4 pb-32">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 lg:gap-4 xl:grid-cols-6">
                 {menus.map((menu) => {
                     const qty = getCartQty(menu.id);
 

@@ -9,7 +9,7 @@ interface SearchBarProps {
 
 export default function SearchBar({ value, onChange, onSubmit }: SearchBarProps) {
     return (
-        <section className="px-4 py-4">
+        <section className="px-4 py-4 lg:hidden">
             <form onSubmit={onSubmit}>
                 <div className="relative">
                     <input

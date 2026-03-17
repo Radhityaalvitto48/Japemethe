@@ -17,8 +17,8 @@ class StorePaymentRequest extends FormRequest
     {
         return [
             'order_id' => 'required|exists:orders,id',
-            'payment_method' => 'required|string|max:30',
-            'grass_amount' => 'required|numeric|min:0',
+            'payment_method' => 'nullable|string|max:30',
+            'grass_amount' => 'nullable|numeric|min:0',
         ];
     }
 

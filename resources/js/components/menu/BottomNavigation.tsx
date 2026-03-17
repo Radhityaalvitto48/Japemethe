@@ -40,8 +40,8 @@ export default function BottomNavigation({ activeTab = 'home', onTabClick }: Bot
     ];
 
     return (
-        <nav className="fixed right-0 bottom-0 left-0 z-50 border-t border-gray-100 bg-white px-6 py-3">
-            <div className="mx-auto flex max-w-lg items-center justify-around">
+        <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 border-t border-gray-100 bg-white px-6 py-3 lg:hidden">
+            <div className="flex items-center justify-around">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}

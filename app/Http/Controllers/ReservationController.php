@@ -48,9 +48,12 @@ class ReservationController extends Controller
                 ], 422);
             }
 
+            // Map seating type: frontend sends 'kursi', DB stores 'chair'
+            $dbSeatingType = $validated['seating_type'] === 'kursi' ? 'chair' : $validated['seating_type'];
+
             // Cek apakah meja sesuai dengan seating type
             $table = Table::find($validated['id_table']);
-            if ($table->seating_type !== $validated['seating_type']) {
+            if ($table->seating_type !== $dbSeatingType) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Tipe tempat duduk tidak sesuai dengan meja yang dipilih'
@@ -61,7 +64,7 @@ class ReservationController extends Controller
                 'customer_name' => $validated['customer_name'],
                 'customer_phone' => $validated['customer_phone'],
                 'id_table' => $validated['id_table'],
-                'seating_type' => $validated['seating_type'],
+                'seating_type' => $dbSeatingType,
                 'reservation_date' => $validated['reservation_date'],
                 'reservation_time' => $validated['reservation_time'],
                 'status' => 'pending',

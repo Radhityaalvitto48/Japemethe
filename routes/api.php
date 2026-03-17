@@ -28,6 +28,7 @@ Route::post('/promos/validate', [PromoController::class, 'validateCode']);
 // Orders
 Route::prefix('orders')->group(function () {
     Route::post('/', [OrderController::class, 'store']);
+    Route::post('/by-ids', [OrderController::class, 'getByIds']);
     Route::get('/{orderNumber}', [OrderController::class, 'showByNumber']);
     Route::put('/{id}/status', [OrderController::class, 'updateStatus']);
 });

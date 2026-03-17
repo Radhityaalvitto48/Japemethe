@@ -11,6 +11,7 @@
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
+        <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
 
         @viteReactRefresh
@@ -19,5 +20,11 @@
     </head>
     <body class="font-sans antialiased">
         @inertia
+
+        <script
+            src="{{ config('services.midtrans.is_production') ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js' }}"
+            data-client-key="{{ config('services.midtrans.client_key') }}"
+            defer>
+        </script>
     </body>
 </html>

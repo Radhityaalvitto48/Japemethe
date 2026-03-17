@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StorePaymentRequest;
 use App\Models\Payment;
+use App\Models\Order;
 use Illuminate\Http\Request;
+use Midtrans\Snap;
 
 class PaymentController extends Controller
 {
@@ -26,6 +28,7 @@ class PaymentController extends Controller
 
     /**
      * Store a newly created resource in storage.
+     * Creates a payment record and generates a Midtrans Snap token.
      */
     public function store(StorePaymentRequest $request)
     {
@@ -35,18 +38,76 @@ class PaymentController extends Controller
             // Cek apakah order sudah ada payment
             $existingPayment = Payment::where('order_id', $validated['order_id'])->first();
             if ($existingPayment) {
+                // Jika sudah ada dan masih pending, kembalikan snap_token yang ada
+                if ($existingPayment->status_payment === 'pending' && $existingPayment->snap_token) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Payment sudah ada',
+                        'data' => $existingPayment->load('order')
+                    ]);
+                }
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Order ini sudah memiliki pembayaran'
                 ], 422);
             }
 
+            $order = Order::with('orderDetails.menu')->findOrFail($validated['order_id']);
+
+            // Build item details untuk Midtrans
+            $itemDetails = [];
+            foreach ($order->orderDetails as $detail) {
+                $itemDetails[] = [
+                    'id' => (string) $detail->menu_id,
+                    'price' => (int) round($detail->unit_price),
+                    'quantity' => $detail->quantity,
+                    'name' => mb_substr($detail->menu->name ?? 'Menu', 0, 50),
+                ];
+            }
+
+            // Hitung total dari item details (harus match dengan gross_amount)
+            $grossAmount = 0;
+            foreach ($itemDetails as $item) {
+                $grossAmount += $item['price'] * $item['quantity'];
+            }
+
+            // Jika ada diskon (total_price < gross dari items), tambahkan sebagai item diskon
+            $orderTotal = (int) round($order->total_price);
+            if ($orderTotal < $grossAmount) {
+                $discountAmount = $grossAmount - $orderTotal;
+                $itemDetails[] = [
+                    'id' => 'DISCOUNT',
+                    'price' => -$discountAmount,
+                    'quantity' => 1,
+                    'name' => 'Diskon Promo',
+                ];
+                $grossAmount = $orderTotal;
+            }
+
+            // Buat Midtrans Snap payload
+            $midtransOrderId = 'ORDER-' . $order->id . '-' . time();
+
+            $snapPayload = [
+                'transaction_details' => [
+                    'order_id' => $midtransOrderId,
+                    'gross_amount' => $grossAmount,
+                ],
+                'item_details' => $itemDetails,
+                'customer_details' => [
+                    'email' => $order->customer_email ?? 'guest@japemethe.com',
+                    'phone' => $order->customer_phone ?? '',
+                ],
+            ];
+
+            $snapToken = Snap::getSnapToken($snapPayload);
+
             $payment = Payment::create([
                 'order_id' => $validated['order_id'],
-                'payment_method' => $validated['payment_method'],
-                'grass_amount' => $validated['grass_amount'],
+                'payment_method' => $validated['payment_method'] ?? 'midtrans_snap',
+                'grass_amount' => $grossAmount,
                 'status_payment' => 'pending',
-                'snap_token' => '', // Akan diisi setelah generate dari Midtrans
+                'snap_token' => $snapToken,
             ]);
 
             return response()->json([
@@ -121,27 +182,70 @@ class PaymentController extends Controller
 
     /**
      * Handle Midtrans notification callback.
+     * Endpoint ini dipanggil oleh Midtrans server setelah pembayaran.
      */
     public function handleNotification(Request $request)
     {
-        // TODO: Implementasi Midtrans notification handler
-        // Ini akan dipanggil oleh Midtrans setelah pembayaran
+        $serverKey = config('services.midtrans.server_key');
 
+        // Verifikasi signature dari Midtrans
         $orderId = $request->order_id;
+        $statusCode = $request->status_code;
+        $grossAmount = $request->gross_amount;
+        $signatureKey = $request->signature_key;
         $transactionStatus = $request->transaction_status;
         $fraudStatus = $request->fraud_status ?? null;
 
-        $payment = Payment::where('order_id', $orderId)->first();
+        $expectedSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
+
+        if (!hash_equals($expectedSignature, $signatureKey ?? '')) {
+            return response()->json(['message' => 'Invalid signature'], 403);
+        }
+
+        // Extract real order ID dari format "ORDER-{id}-{timestamp}"
+        $realOrderId = null;
+        if (preg_match('/^ORDER-(\d+)-/', $orderId, $matches)) {
+            $realOrderId = $matches[1];
+        }
+
+        if (!$realOrderId) {
+            return response()->json(['message' => 'Invalid order ID format'], 400);
+        }
+
+        $payment = Payment::where('order_id', $realOrderId)->first();
 
         if (!$payment) {
             return response()->json(['message' => 'Payment not found'], 404);
         }
 
-        if ($transactionStatus == 'capture' || $transactionStatus == 'settlement') {
-            $payment->update(['status_payment' => 'completed']);
+        // Update status berdasarkan transaction_status dari Midtrans
+        if ($transactionStatus === 'capture') {
+            // Untuk credit card: cek fraud status
+            if ($fraudStatus === 'accept') {
+                $payment->update([
+                    'status_payment' => 'completed',
+                    'payment_method' => $request->payment_type ?? $payment->payment_method,
+                    'payment_date' => now(),
+                ]);
+                $payment->order->update(['status_order' => 'in_progress']);
+            } elseif ($fraudStatus === 'challenge') {
+                // Tetap pending, tunggu merchant review
+                $payment->update(['status_payment' => 'pending']);
+            }
+        } elseif ($transactionStatus === 'settlement') {
+            $payment->update([
+                'status_payment' => 'completed',
+                'payment_method' => $request->payment_type ?? $payment->payment_method,
+                'payment_date' => now(),
+            ]);
             $payment->order->update(['status_order' => 'in_progress']);
-        } elseif ($transactionStatus == 'deny' || $transactionStatus == 'expire' || $transactionStatus == 'cancel') {
-            $payment->update(['status_payment' => 'failed']);
+        } elseif (in_array($transactionStatus, ['deny', 'expire', 'cancel', 'failure'])) {
+            $payment->update([
+                'status_payment' => 'failed',
+                'payment_date' => now(),
+            ]);
+        } elseif ($transactionStatus === 'pending') {
+            $payment->update(['status_payment' => 'pending']);
         }
 
         return response()->json(['message' => 'Notification handled']);

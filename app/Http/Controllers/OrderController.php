@@ -7,9 +7,11 @@ use App\Http\Requests\StoreOrderRequest;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Menu;
+use App\Models\Payment;
 use App\Models\Promo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Midtrans\Snap;
 
 class OrderController extends Controller
 {
@@ -96,6 +98,7 @@ class OrderController extends Controller
             ]);
 
             // Create order details
+            $itemDetails = [];
             foreach ($validated['items'] as $item) {
                 $menu = Menu::findOrFail($item['menu_id']);
                 OrderDetail::create([
@@ -106,14 +109,67 @@ class OrderController extends Controller
                     'subtotal' => $menu->price * $item['quantity'],
                     'note' => $item['note'] ?? null,
                 ]);
+
+                $itemDetails[] = [
+                    'id' => (string) $menu->id,
+                    'price' => (int) round($menu->price),
+                    'quantity' => $item['quantity'],
+                    'name' => mb_substr($menu->name, 0, 50),
+                ];
             }
+
+            // Hitung gross amount dari item details
+            $grossAmount = 0;
+            foreach ($itemDetails as $itemDetail) {
+                $grossAmount += $itemDetail['price'] * $itemDetail['quantity'];
+            }
+
+            // Jika ada diskon, tambahkan sebagai item negatif agar gross_amount match
+            $orderTotal = (int) round(max(0, $totalPrice));
+            if ($orderTotal < $grossAmount) {
+                $discountValue = $grossAmount - $orderTotal;
+                $itemDetails[] = [
+                    'id' => 'DISCOUNT',
+                    'price' => -$discountValue,
+                    'quantity' => 1,
+                    'name' => 'Diskon Promo',
+                ];
+                $grossAmount = $orderTotal;
+            }
+
+            // Generate Midtrans Snap token
+            $midtransOrderId = 'ORDER-' . $order->id . '-' . time();
+
+            $snapPayload = [
+                'transaction_details' => [
+                    'order_id' => $midtransOrderId,
+                    'gross_amount' => $grossAmount,
+                ],
+                'item_details' => $itemDetails,
+                'customer_details' => [
+                    'email' => $order->customer_email ?? 'guest@japemethe.com',
+                    'phone' => $order->customer_phone ?? '',
+                ],
+            ];
+
+            $snapToken = Snap::getSnapToken($snapPayload);
+
+            // Create payment record
+            $payment = Payment::create([
+                'order_id' => $order->id,
+                'payment_method' => 'midtrans_snap',
+                'grass_amount' => $grossAmount,
+                'status_payment' => 'pending',
+                'snap_token' => $snapToken,
+            ]);
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Order berhasil dibuat',
-                'data' => $order->load(['orderDetails.menu', 'table'])
+                'data' => $order->load(['orderDetails.menu', 'table', 'payment']),
+                'snap_token' => $snapToken,
             ], 201);
 
         } catch (\Exception $e) {
@@ -144,6 +200,27 @@ class OrderController extends Controller
         return response()->json([
             'success' => true,
             'data' => $order
+        ]);
+    }
+
+    /**
+     * Get orders by multiple IDs (for session-based history).
+     */
+    public function getByIds(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array|max:50',
+            'ids.*' => 'integer',
+        ]);
+
+        $orders = Order::with(['table', 'orderDetails.menu', 'payment'])
+            ->whereIn('id', $request->ids)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $orders
         ]);
     }
 

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Midtrans\Config as MidtransConfig;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureMidtrans();
     }
 
     /**
@@ -46,5 +48,16 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null
         );
+    }
+
+    /**
+     * Configure Midtrans payment gateway.
+     */
+    protected function configureMidtrans(): void
+    {
+        MidtransConfig::$serverKey = config('services.midtrans.server_key');
+        MidtransConfig::$isProduction = (bool) config('services.midtrans.is_production');
+        MidtransConfig::$isSanitized = (bool) config('services.midtrans.is_sanitized');
+        MidtransConfig::$is3ds = (bool) config('services.midtrans.is_3ds');
     }
 }

@@ -194,38 +194,49 @@ function MenuPageContent({ menus, categories, promos, banners, recommendedMenus,
 
     // Handle tab navigation
     const handleTabClick = (tab: string) => {
-        console.log('Tab clicked:', tab);
+        if (tab === 'orders') {
+            router.get('/orders');
+        }
     };
 
     return (
         <>
             <Head title="Menu - Japemethe" />
 
-            <div className="min-h-screen bg-white">
-                <Header onBackClick={handleBack} cartCount={totalCartItems} />
-
-                <PromoSection banners={banners} />
-
-                <SearchBar
-                    value={search}
-                    onChange={setSearch}
-                    onSubmit={handleSearch}
+            <div className="min-h-screen bg-gray-100">
+            <div className="relative mx-auto min-h-screen max-w-lg bg-white shadow-xl lg:max-w-full lg:shadow-none">
+                <Header
+                    onBackClick={handleBack}
+                    cartCount={totalCartItems}
+                    searchValue={search}
+                    onSearchChange={setSearch}
+                    onSearchSubmit={handleSearch}
                 />
 
-                <CategoryList
-                    categories={categories}
-                    activeCategory={activeCategory}
-                    onCategoryClick={handleCategoryClick}
-                />
+                <div className="lg:mx-auto lg:max-w-7xl">
+                    <PromoSection banners={banners} />
 
-                <MenuGrid
-                    menus={menus}
-                    cart={cart}
-                    onMenuClick={handleMenuClick}
-                    onAddToCart={handleQuickAdd}
-                    onIncrement={handleIncrement}
-                    onDecrement={handleDecrement}
-                />
+                    <SearchBar
+                        value={search}
+                        onChange={setSearch}
+                        onSubmit={handleSearch}
+                    />
+
+                    <CategoryList
+                        categories={categories}
+                        activeCategory={activeCategory}
+                        onCategoryClick={handleCategoryClick}
+                    />
+
+                    <MenuGrid
+                        menus={menus}
+                        cart={cart}
+                        onMenuClick={handleMenuClick}
+                        onAddToCart={handleQuickAdd}
+                        onIncrement={handleIncrement}
+                        onDecrement={handleDecrement}
+                    />
+                </div>
 
                 {/* Cart Bar */}
                 <CartBar items={cart} onCartClick={handleCartClick} />
@@ -255,6 +266,7 @@ function MenuPageContent({ menus, categories, promos, banners, recommendedMenus,
                     activeTab="home"
                     onTabClick={handleTabClick}
                 />
+            </div>
             </div>
         </>
     );

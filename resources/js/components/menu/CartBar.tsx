@@ -21,7 +21,7 @@ export default function CartBar({ items, onCartClick }: CartBarProps) {
     const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     return (
-        <div className="fixed right-0 bottom-16 left-0 z-40 px-4 pb-2">
+        <div className="fixed bottom-16 left-1/2 z-40 w-full max-w-lg -translate-x-1/2 px-4 pb-2 lg:bottom-6 lg:max-w-3xl">
             <button
                 onClick={onCartClick}
                 className="flex w-full items-center justify-between rounded-2xl bg-orange-500 px-5 py-3.5 shadow-lg shadow-orange-500/30 transition-all hover:bg-orange-600 hover:shadow-xl hover:shadow-orange-500/40 active:scale-[0.98]"
