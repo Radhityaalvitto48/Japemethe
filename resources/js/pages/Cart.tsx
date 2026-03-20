@@ -29,10 +29,11 @@ function CartPageContent() {
     const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
     const [promoCode, setPromoCode] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [promoError, setPromoError] = useState('');
     const [promoDiscount, setPromoDiscount] = useState(0);
     const [promoApplied, setPromoApplied] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const finalTotal = Math.max(0, totalPrice - promoDiscount);
 
     const handlePromoChange = (value: string) => {
         setPromoCode(value.toUpperCase());
@@ -68,8 +69,6 @@ function CartPageContent() {
         }
     };
 
-    const finalTotal = Math.max(0, totalPrice - promoDiscount);
-
     const handleOrder = async () => {
         if (cart.length === 0) return;
         if (!currentTable) {
@@ -99,54 +98,22 @@ function CartPageContent() {
 
             const data = await res.json();
 
-            if (!data.success || !data.snap_token) {
+            if (!data.success || !data.data?.id) {
                 alert(data.message || 'Gagal membuat pesanan');
                 setIsSubmitting(false);
                 return;
             }
 
-            const paymentId = data.data?.payment?.id;
-            const orderId = data.data?.id;
+            const orderId = data.data.id;
 
-            if (orderId) {
-                const stored = JSON.parse(sessionStorage.getItem('order_ids') || '[]');
-                if (!stored.includes(orderId)) {
-                    stored.push(orderId);
-                    sessionStorage.setItem('order_ids', JSON.stringify(stored));
-                }
+            const stored = JSON.parse(sessionStorage.getItem('order_ids') || '[]');
+            if (!stored.includes(orderId)) {
+                stored.push(orderId);
+                sessionStorage.setItem('order_ids', JSON.stringify(stored));
             }
 
-            window.snap.pay(data.snap_token, {
-                onSuccess: async () => {
-                    if (paymentId) {
-                        await fetch(`/api/payments/${paymentId}/status`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ status_payment: 'completed' }),
-                        }).catch(() => {});
-                    }
-                    clearCart();
-                    router.get('/orders');
-                },
-                onPending: () => {
-                    clearCart();
-                    router.get('/orders');
-                },
-                onError: async () => {
-                    if (paymentId) {
-                        await fetch(`/api/payments/${paymentId}/status`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ status_payment: 'failed' }),
-                        }).catch(() => {});
-                    }
-                    alert('Pembayaran gagal. Silakan coba lagi.');
-                    setIsSubmitting(false);
-                },
-                onClose: () => {
-                    setIsSubmitting(false);
-                },
-            });
+            clearCart();
+            router.get('/orders');
         } catch {
             alert('Terjadi kesalahan, coba lagi.');
             setIsSubmitting(false);
@@ -224,7 +191,7 @@ function CartPageContent() {
                             disabled={isSubmitting}
                             className="w-full rounded-full bg-orange-500 py-3.5 text-sm font-bold text-white shadow-md shadow-orange-500/25 transition-all hover:bg-orange-600 hover:shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isSubmitting ? 'Memproses...' : `Konfirmasi Pesanan — Rp ${finalTotal.toLocaleString('id-ID')}`}
+                            {isSubmitting ? 'Memproses...' : `Kirim Pesanan — Rp ${finalTotal.toLocaleString('id-ID')}`}
                         </button>
                     </div>
                 )}

@@ -13,7 +13,7 @@ export default function OrderHeader() {
                 </button>
                 <div>
                     <h1 className="text-lg font-bold text-gray-800">Pesanan Saya</h1>
-                    <p className="text-xs text-gray-400">Riwayat pesanan sesi ini</p>
+                    <p className="text-xs text-gray-400">Tunjukkan QR ke kasir untuk pembayaran</p>
                 </div>
             </div>
         </header>

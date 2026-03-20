@@ -2,161 +2,200 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Carousel;
 use App\Models\Menu;
 use App\Models\MenuCategory;
 use App\Models\Table;
-use Inertia\Inertia;
-
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 
-class MenuController extends Controller
+class MenuController extends \App\Http\Controllers\Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index(Request $request)
+    public function indexPage(Request $request): Response
     {
-        $query = Menu::with(['menuCategory', 'menuImages'])
-            ->where('status_menu', 'available')
-            ->whereHas('menuCategory', function ($q) {
-                $q->where('status_category', 'visible');
-            });
-
-        // Filter by category
-        if ($request->has('category_id') && $request->category_id) {
-            $query->where('menu_category_id', $request->category_id);
-        }
-
-        // Search by name
-        if ($request->has('search') && $request->search) {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
-
-        $menus = $query->orderBy('name')->get();
-
-        // Get categories for filter
-        $categories = MenuCategory::where('status_category', 'visible')
-            ->get();
-
-        // Get recommended menus
-        $recommendedMenus = Menu::with(['menuCategory', 'menuImages'])
-            ->where('status_menu', 'available')
-            ->where('is_recommended', true)
-            ->whereHas('menuCategory', function ($q) {
-                $q->where('status_category', 'visible');
-            })
-            ->limit(6)
-            ->get();
-
-        return Inertia::render('Menu', [
-            'menus' => $menus,
-            'categories' => $categories,
-            'promos' => [],
-            'recommendedMenus' => $recommendedMenus,
-            'selectedCategory' => $request->category_id,
-            'searchQuery' => $request->search,
-        ]);
+        return Inertia::render('Menu', $this->buildMenuPagePayload($request));
     }
 
-    /**
-     * Handle QR code scan for table
-     */
-    public function scanTable(string $tableNumber, Request $request)
+    public function scanTable(Request $request, string $tableNumber): Response
     {
-        // Verify table exists
-        $table = Table::where('table_number', $tableNumber)
+        $table = Table::query()
+            ->where('table_number', $tableNumber)
             ->where('is_active', true)
-            ->first();
+            ->firstOrFail();
 
-        if (!$table) {
-            abort(404, 'Meja tidak ditemukan atau tidak aktif');
-        }
+        return Inertia::render('Menu', $this->buildMenuPagePayload($request, $table));
+    }
 
-        // Get menu data (same as index method)
-        $query = Menu::with(['menuCategory', 'menuImages'])
-            ->where('status_menu', 'available')
-            ->whereHas('menuCategory', function ($q) {
-                $q->where('status_category', 'visible');
-            });
+    public function index(Request $request): JsonResponse
+    {
+        $menus = $this->baseMenuQuery($request)->get();
 
-        // Filter by category
-        if ($request->has('category_id') && $request->category_id) {
-            $query->where('menu_category_id', $request->category_id);
-        }
-
-        // Search by name
-        if ($request->has('search') && $request->search) {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
-
-        $menus = $query->orderBy('name')->get();
-
-        // Get categories for filter
-        $categories = MenuCategory::where('status_category', 'visible')
-            ->get();
-
-        // Get recommended menus
-        $recommendedMenus = Menu::with(['menuCategory', 'menuImages'])
-            ->where('status_menu', 'available')
-            ->where('is_recommended', true)
-            ->whereHas('menuCategory', function ($q) {
-                $q->where('status_category', 'visible');
-            })
-            ->limit(6)
-            ->get();
-
-        return Inertia::render('Menu', [
-            'menus' => $menus,
-            'categories' => $categories,
-            'promos' => [],
-            'recommendedMenus' => $recommendedMenus,
-            'selectedCategory' => $request->category_id,
-            'searchQuery' => $request->search,
-            'currentTable' => $table, // Add table information
+        return response()->json([
+            'success' => true,
+            'data' => $menus,
         ]);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function show(int $id): JsonResponse
     {
-        $menu = Menu::with(['menuCategory', 'menuImages'])->find($id);
+        $menu = Menu::query()
+            ->with([
+                'menuCategory:id,name,image,display,status_category',
+                'menuImages:id,menu_id,image',
+            ])
+            ->find($id);
 
-        if (!$menu) {
+        if (! $menu) {
             return response()->json([
                 'success' => false,
-                'message' => 'Menu tidak ditemukan'
+                'message' => 'Menu tidak ditemukan.',
             ], 404);
         }
 
         return response()->json([
             'success' => true,
-            'data' => $menu
+            'data' => $menu,
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    private function buildMenuPagePayload(Request $request, ?Table $table = null): array
     {
-        //
+        $menus = $this->menuListQuery($request)
+            ->get()
+            ->map(fn (Menu $menu) => $this->transformMenuListItem($menu))
+            ->values();
+
+        $categories = MenuCategory::query()
+            ->where('status_category', 'visible')
+            ->where('display', true)
+            ->orderBy('display')
+            ->orderBy('name')
+            ->get();
+
+        $banners = Carousel::query()
+            ->active()
+            ->latest()
+            ->limit(3)
+            ->get()
+            ->map(fn (Carousel $carousel) => [
+                'id' => $carousel->id,
+                'image' => $this->resolveStorageUrl($carousel->image),
+                'title' => null,
+            ])
+            ->values();
+
+        return [
+            'menus' => $menus,
+            'categories' => $categories,
+            'banners' => $banners,
+            'selectedCategory' => $request->filled('category_id')
+                ? (int) $request->input('category_id')
+                : null,
+            'searchQuery' => $request->string('search')->toString(),
+            'currentTable' => $table ? $this->formatTableForMenu($table) : null,
+        ];
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    private function menuListQuery(Request $request)
     {
-        //
+        $search = trim($request->string('search')->toString());
+        $categoryId = $request->input('category_id');
+
+        return Menu::query()
+            ->select([
+                'id',
+                'menu_category_id',
+                'name',
+                'slug',
+                'price',
+                'stock',
+                'is_recommended',
+                'status_menu',
+            ])
+            ->with([
+                'menuCategory:id,name',
+                'menuImages:id,menu_id,image',
+            ])
+            ->where('status_menu', 'available')
+            ->when($search !== '', function (Builder $query) use ($search) {
+                $query->where(function (Builder $inner) use ($search) {
+                    $inner
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
+                });
+            })
+            ->when(is_numeric($categoryId), fn (Builder $query) => $query->where('menu_category_id', (int) $categoryId))
+            ->orderByDesc('is_recommended')
+            ->orderBy('name');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    private function baseMenuQuery(Request $request)
     {
-        //
+        $search = trim($request->string('search')->toString());
+        $categoryId = $request->input('category_id');
+
+        return Menu::query()
+            ->with([
+                'menuCategory:id,name,image,display,status_category',
+                'menuImages:id,menu_id,image',
+            ])
+            ->where('status_menu', 'available')
+            ->when($search !== '', function (Builder $query) use ($search) {
+                $query->where(function (Builder $inner) use ($search) {
+                    $inner
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
+                });
+            })
+            ->when(is_numeric($categoryId), fn (Builder $query) => $query->where('menu_category_id', (int) $categoryId))
+            ->orderByDesc('is_recommended')
+            ->orderBy('name');
+    }
+
+    private function transformMenuListItem(Menu $menu): array
+    {
+        return [
+            'id' => $menu->id,
+            'id_menu' => (int) $menu->id,
+            'menu_category_id' => $menu->menu_category_id,
+            'name' => $menu->name,
+            'slug' => $menu->slug,
+            'price' => $menu->price,
+            'stock' => $menu->stock,
+            'is_recommended' => (bool) $menu->is_recommended,
+            'status_menu' => $menu->status_menu,
+            'image_url' => $menu->image_url,
+            'menu_category' => [
+                'id' => $menu->menuCategory?->id,
+                'name' => $menu->menuCategory?->name,
+            ],
+        ];
+    }
+
+    private function formatTableForMenu(Table $table): array
+    {
+        return [
+            'id' => $table->id,
+            'table_number' => $table->table_number,
+            'seating_type' => $table->seating_type === 'chair' ? 'kursi' : $table->seating_type,
+            'qr_code' => $table->qr_code ? $this->resolveStorageUrl($table->qr_code) : null,
+            'is_active' => (bool) $table->is_active,
+        ];
+    }
+
+    private function resolveStorageUrl(?string $path): string
+    {
+        if (! $path) {
+            return asset('images/placeholder.jpg');
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        return asset('storage/' . ltrim($path, '/'));
     }
 }

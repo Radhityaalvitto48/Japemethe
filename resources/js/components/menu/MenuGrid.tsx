@@ -1,4 +1,5 @@
 import { Minus, Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { type CartItem } from './CartBar';
 
 export interface MenuImage {
@@ -15,18 +16,25 @@ export interface MenuCategory {
     status_category: string;
 }
 
+export interface MenuCategoryInfo {
+    id: number;
+    name: string;
+}
+
 export interface Menu {
     id: number;
+    id_menu?: number;
     menu_category_id: number;
     name: string;
     slug: string;
-    description: string;
+    description?: string;
     price: number;
     stock: number;
     is_recommended: boolean;
     status_menu: string;
-    menu_category: MenuCategory;
-    menu_images: MenuImage[];
+    image_url?: string;
+    menu_category?: MenuCategoryInfo;
+    menu_images?: MenuImage[];
 }
 
 interface MenuGridProps {
@@ -47,6 +55,10 @@ export const getImageUrl = (path: string): string => {
 
 // Get first image from menu
 export const getMenuImage = (menu: Menu): string => {
+    if (menu.image_url) {
+        return getImageUrl(menu.image_url);
+    }
+
     if (menu.menu_images && menu.menu_images.length > 0) {
         const images = menu.menu_images[0].image;
         if (Array.isArray(images) && images.length > 0) {
@@ -59,6 +71,11 @@ export const getMenuImage = (menu: Menu): string => {
 // Get all images from menu
 export const getAllMenuImages = (menu: Menu): string[] => {
     const images: string[] = [];
+
+    if (menu.image_url) {
+        images.push(getImageUrl(menu.image_url));
+    }
+
     if (menu.menu_images && menu.menu_images.length > 0) {
         menu.menu_images.forEach((mi) => {
             if (Array.isArray(mi.image)) {
@@ -66,10 +83,25 @@ export const getAllMenuImages = (menu: Menu): string[] => {
             }
         });
     }
-    return images.length > 0 ? images : ['/images/placeholder.jpg'];
+
+    return images.length > 0 ? Array.from(new Set(images)) : ['/images/placeholder.jpg'];
 };
 
 export default function MenuGrid({ menus, cart, onMenuClick, onAddToCart, onIncrement, onDecrement }: MenuGridProps) {
+    const [visibleCount, setVisibleCount] = useState(() => Math.min(12, menus.length));
+
+    useEffect(() => {
+        setVisibleCount(Math.min(12, menus.length));
+
+        if (menus.length <= 12) return;
+
+        const timer = window.setTimeout(() => {
+            setVisibleCount(menus.length);
+        }, 120);
+
+        return () => window.clearTimeout(timer);
+    }, [menus.length]);
+
     const getCartQty = (menuId: number): number => {
         return cart.find((item) => item.menuId === menuId)?.quantity ?? 0;
     };
@@ -89,8 +121,9 @@ export default function MenuGrid({ menus, cart, onMenuClick, onAddToCart, onIncr
     return (
         <section className="px-4 pb-32">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 lg:gap-4 xl:grid-cols-6">
-                {menus.map((menu) => {
+                {menus.slice(0, visibleCount).map((menu, index) => {
                     const qty = getCartQty(menu.id);
+                    const isLcpPriority = index === 0;
 
                     return (
                         <div
@@ -104,6 +137,15 @@ export default function MenuGrid({ menus, cart, onMenuClick, onAddToCart, onIncr
                                     src={getMenuImage(menu)}
                                     alt={menu.name}
                                     className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                                    loading={isLcpPriority ? 'eager' : 'lazy'}
+                                    fetchPriority={isLcpPriority ? 'high' : 'low'}
+                                    decoding={isLcpPriority ? 'sync' : 'async'}
+                                    width={320}
+                                    height={320}
+                                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 220px"
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).src = '/images/placeholder.jpg';
+                                    }}
                                 />
                                 {menu.stock === 0 && (
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/40">

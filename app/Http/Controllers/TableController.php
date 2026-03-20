@@ -3,93 +3,52 @@
 namespace App\Http\Controllers;
 
 use App\Models\Table;
-use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
-class TableController extends Controller
+class TableController extends \App\Http\Controllers\Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index(Request $request)
+    public function index(): JsonResponse
     {
-        $query = Table::where('is_active', true);
-
-        // Filter by seating type
-        if ($request->has('seating_type')) {
-            $query->where('seating_type', $request->seating_type);
-        }
-
-        $tables = $query->orderBy('table_number')->get();
+        $tables = Table::query()
+            ->orderBy('table_number')
+            ->get()
+            ->map(fn (Table $table) => $this->transformTable($table))
+            ->values();
 
         return response()->json([
             'success' => true,
-            'data' => $tables
+            'data' => $tables,
         ]);
     }
 
-    /**
-     * Display table by table number (untuk QR code scan).
-     */
-    public function showByNumber(string $tableNumber)
+    public function showByNumber(string $tableNumber): JsonResponse
     {
-        $table = Table::where('table_number', $tableNumber)
-            ->where('is_active', true)
+        $table = Table::query()
+            ->where('table_number', $tableNumber)
             ->first();
 
-        if (!$table) {
+        if (! $table) {
             return response()->json([
                 'success' => false,
-                'message' => 'Meja tidak ditemukan atau tidak aktif'
+                'message' => 'Meja tidak ditemukan.',
             ], 404);
         }
 
         return response()->json([
             'success' => true,
-            'data' => $table
+            'data' => $this->transformTable($table),
         ]);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    private function transformTable(Table $table): array
     {
-        $table = Table::find($id);
-
-        if (!$table) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Meja tidak ditemukan'
-            ], 404);
-        }
-
-        return response()->json([
-            'success' => true,
-            'data' => $table
-        ]);
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        return [
+            'id' => $table->id,
+            'id_table' => $table->id,
+            'table_number' => $table->table_number,
+            'seating_type' => $table->seating_type,
+            'qr_code' => $table->qr_code ? asset('storage/' . ltrim($table->qr_code, '/')) : null,
+            'is_active' => (bool) $table->is_active,
+        ];
     }
 }

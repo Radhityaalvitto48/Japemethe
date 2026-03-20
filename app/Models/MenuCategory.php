@@ -38,17 +38,15 @@ class MenuCategory extends Model
                 if (file_exists($imagePath) && !str_ends_with($imagePath, '.webp')) {
                     $manager = new ImageManager(new Driver());
                     $image = $manager->read($imagePath);
-                    $image->cover(800, 800);
+                    $image->coverDown(512, 512);
                     $webpPath = preg_replace('/\.(jpg|jpeg|png)$/i', '.webp', $imagePath);
-                    $encodedImage = $image->toWebp(90);
+                    $encodedImage = $image->toWebp(68);
                     file_put_contents($webpPath, $encodedImage);
                     if ($imagePath !== $webpPath) {
                         unlink($imagePath);
                     }
                     $webpFileName = str_replace(public_path('storage/'), '', $webpPath);
                     $menuCategory->updateQuietly(['image' => $webpFileName]);
-                } else {
-                    throw new \Exception('Gambar tidak berubah atau file tidak ditemukan.');
                 }
             }
         });

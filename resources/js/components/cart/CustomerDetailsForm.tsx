@@ -1,4 +1,4 @@
-import { Phone, Mail, Tag } from 'lucide-react';
+import { Mail, Phone, Tag } from 'lucide-react';
 
 interface CustomerDetailsFormProps {
     phone: string;
@@ -69,6 +69,7 @@ export default function CustomerDetailsForm({
                     </div>
                     {promoCode.trim() && !promoApplied && (
                         <button
+                            type="button"
                             onClick={onValidatePromo}
                             className="shrink-0 rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white hover:bg-orange-600 transition-colors active:scale-[0.97]"
                         >

@@ -8,29 +8,31 @@ use Illuminate\Http\JsonResponse;
 
 class CarouselController extends Controller
 {
-    /**
-     * Ambil carousel aktif untuk promo section
-     */
     public function active(): JsonResponse
     {
-        $carousels = Carousel::active()
+        $carousels = Carousel::query()
+            ->active()
             ->latest()
             ->limit(3)
-            ->get(['id', 'image'])
-            ->map(function ($carousel) {
+            ->get()
+            ->map(function (Carousel $carousel) {
+                $image = $carousel->image;
+
+                if ($image && ! str_starts_with($image, 'http://') && ! str_starts_with($image, 'https://')) {
+                    $image = asset('storage/' . ltrim($image, '/'));
+                }
+
                 return [
                     'id' => $carousel->id,
-                    'image' => $carousel->image ? asset('storage/' . $carousel->image) : null,
-                    'title' => 'Promo ' . $carousel->id
+                    'image' => $image,
+                    'title' => null,
                 ];
-            });
+            })
+            ->values();
 
         return response()->json([
             'success' => true,
-            'data' => $carousels
-        ], 200, [
-            'Cache-Control' => 'public, max-age=300', // Cache 5 menit
-            'ETag' => md5(serialize($carousels))
-        ]);
+            'data' => $carousels,
+        ])->header('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
     }
 }

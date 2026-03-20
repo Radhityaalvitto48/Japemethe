@@ -36,11 +36,13 @@ export interface Order {
     } | null;
     order_details: OrderItem[];
     payment: Payment | null;
+    qr_payload?: string | null;
+    qr_code_data_uri?: string | null;
 }
 
 const statusConfig = {
     pending: {
-        label: 'Menunggu Pembayaran',
+        label: 'Belum Dibayar',
         color: 'text-yellow-600 bg-yellow-50 border-yellow-200',
         icon: Clock,
     },
@@ -121,6 +123,36 @@ export default function OrderCard({ order }: OrderCardProps) {
                     </div>
                 ))}
             </div>
+
+            {order.status_order === 'pending' && order.qr_code_data_uri && (
+                <div className="border-t border-gray-50 px-4 py-4">
+                    <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
+                        <p className="text-xs font-bold uppercase tracking-wide text-orange-700">
+                            Perhatian
+                        </p>
+                        <p className="mt-1 text-xs leading-relaxed text-orange-700">
+                            1) Tunjukkan QR ini ke kasir. 2) Kasir akan scan, verifikasi pesanan, lalu proses pembayaran tunai atau digital. 3) Status pesanan otomatis berubah setelah pembayaran berhasil.
+                        </p>
+
+                        <div className="mt-4 flex justify-center">
+                            <div className="rounded-2xl border border-orange-100 bg-white p-3 shadow-sm">
+                                <img
+                                    src={order.qr_code_data_uri}
+                                    alt={`QR pesanan ${order.order_number}`}
+                                    className="h-48 w-48 rounded-xl"
+                                />
+                            </div>
+                        </div>
+
+                        <p className="mt-3 text-center text-sm font-semibold text-gray-700">
+                            Order #{order.order_number}
+                        </p>
+                        <p className="mt-1 text-center text-xs text-gray-500">
+                            Simpan layar ini sampai proses pembayaran selesai.
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Order Footer */}
             <div className="border-t border-gray-50 px-4 py-3 flex items-center justify-between">

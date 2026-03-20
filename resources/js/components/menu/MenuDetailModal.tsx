@@ -1,6 +1,6 @@
 import { Carousel, CarouselSlide } from '@/components/ui/Carousel';
 import { Minus, Plus, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getAllMenuImages, type Menu } from './MenuGrid';
 
 interface MenuDetailModalProps {
@@ -13,12 +13,81 @@ interface MenuDetailModalProps {
 
 export default function MenuDetailModal({ menu, isOpen, onClose, onAddToCart, initialQuantity = 0 }: MenuDetailModalProps) {
     const [quantity, setQuantity] = useState(1);
+    const [resolvedMenu, setResolvedMenu] = useState<Menu | null>(menu);
+    const [isFetchingDetail, setIsFetchingDetail] = useState(false);
+    const detailCacheRef = useRef<Map<number, Menu>>(new Map());
+
+    useEffect(() => {
+        if (!menu) {
+            setResolvedMenu(null);
+            return;
+        }
+
+        const cached = detailCacheRef.current.get(menu.id);
+        setResolvedMenu(cached ?? menu);
+    }, [menu]);
+
+    useEffect(() => {
+        if (!isOpen || !menu?.id) {
+            return;
+        }
+
+        const cached = detailCacheRef.current.get(menu.id);
+        if (cached) {
+            setResolvedMenu(cached);
+            return;
+        }
+
+        const hasCompleteDetail = !!menu.description && !!menu.menu_images?.length;
+        if (hasCompleteDetail) {
+            return;
+        }
+
+        const controller = new AbortController();
+
+        const fetchMenuDetail = async () => {
+            setIsFetchingDetail(true);
+
+            try {
+                const response = await fetch(`/api/menus/${menu.id}`, {
+                    signal: controller.signal,
+                    headers: {
+                        Accept: 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const payload: { success: boolean; data: Menu } = await response.json();
+                if (payload.success && payload.data) {
+                    detailCacheRef.current.set(menu.id, payload.data);
+                    setResolvedMenu(payload.data);
+                }
+            } catch (error) {
+                if (error instanceof Error && error.name === 'AbortError') {
+                    return;
+                }
+            } finally {
+                setIsFetchingDetail(false);
+            }
+        };
+
+        void fetchMenuDetail();
+
+        return () => {
+            controller.abort();
+        };
+    }, [isOpen, menu]);
+
+    const displayMenu = resolvedMenu ?? menu;
 
     useEffect(() => {
         if (isOpen && menu) {
             setQuantity(initialQuantity > 0 ? initialQuantity : 1);
         }
-    }, [isOpen, menu, initialQuantity]);
+    }, [isOpen, menu?.id, initialQuantity]);
 
     // Lock body scroll when modal is open
     useEffect(() => {
@@ -32,11 +101,11 @@ export default function MenuDetailModal({ menu, isOpen, onClose, onAddToCart, in
         };
     }, [isOpen]);
 
-    if (!isOpen || !menu) return null;
+    if (!isOpen || !displayMenu) return null;
 
-    const images = getAllMenuImages(menu);
-    const isOutOfStock = menu.stock === 0;
-    const maxQty = Math.min(menu.stock, 99);
+    const images = getAllMenuImages(displayMenu);
+    const isOutOfStock = displayMenu.stock === 0;
+    const maxQty = Math.min(displayMenu.stock, 99);
 
     const handleIncrement = () => {
         if (quantity < maxQty) setQuantity((q) => q + 1);
@@ -47,7 +116,7 @@ export default function MenuDetailModal({ menu, isOpen, onClose, onAddToCart, in
     };
 
     const handleAddToCart = () => {
-        onAddToCart(menu, quantity);
+        onAddToCart(displayMenu, quantity);
         onClose();
     };
 
@@ -84,7 +153,7 @@ export default function MenuDetailModal({ menu, isOpen, onClose, onAddToCart, in
                                     <div className="aspect-4/3 w-full overflow-hidden bg-gray-100">
                                         <img
                                             src={img}
-                                            alt={`${menu.name} - ${idx + 1}`}
+                                            alt={`${displayMenu.name} - ${idx + 1}`}
                                             className="h-full w-full object-cover"
                                             onError={(e) => {
                                                 (e.target as HTMLImageElement).src = '/images/placeholder.jpg';
@@ -98,7 +167,7 @@ export default function MenuDetailModal({ menu, isOpen, onClose, onAddToCart, in
                         <div className="aspect-4/3 w-full overflow-hidden bg-gray-100">
                             <img
                                 src={images[0]}
-                                alt={menu.name}
+                                alt={displayMenu.name}
                                 className="h-full w-full object-cover"
                                 onError={(e) => {
                                     (e.target as HTMLImageElement).src = '/images/placeholder.jpg';
@@ -119,32 +188,35 @@ export default function MenuDetailModal({ menu, isOpen, onClose, onAddToCart, in
                 {/* Detail Content */}
                 <div className="p-5">
                     {/* Category Badge */}
-                    {menu.menu_category && (
+                    {displayMenu.menu_category && (
                         <span className="inline-block rounded-full bg-orange-50 px-3 py-1 text-xs font-medium text-orange-600">
-                            {menu.menu_category.name}
+                            {displayMenu.menu_category.name}
                         </span>
                     )}
 
                     {/* Name & Price */}
-                    <h2 className="mt-3 text-xl font-bold text-gray-900">{menu.name}</h2>
+                    <h2 className="mt-3 text-xl font-bold text-gray-900">{displayMenu.name}</h2>
                     <p className="mt-1 text-lg font-bold text-orange-500">
-                        Rp {(menu.price * 1).toLocaleString('id-ID')}
+                        Rp {(displayMenu.price * 1).toLocaleString('id-ID')}
                     </p>
 
                     {/* Stock info */}
                     {!isOutOfStock && (
-                        <p className="mt-1 text-xs text-gray-400">Stok tersedia: {menu.stock}</p>
+                        <p className="mt-1 text-xs text-gray-400">Stok tersedia: {displayMenu.stock}</p>
                     )}
 
                     {/* Description */}
-                    {menu.description && (
+                    {displayMenu.description && (
                         <div className="mt-4">
                             <h3 className="text-sm font-semibold text-gray-700">Deskripsi</h3>
                             <div
                                 className="mt-1 text-sm leading-relaxed text-gray-500"
-                                dangerouslySetInnerHTML={{ __html: menu.description }}
+                                dangerouslySetInnerHTML={{ __html: displayMenu.description }}
                             />
                         </div>
+                    )}
+                    {isFetchingDetail && !displayMenu.description && (
+                        <p className="mt-3 text-xs text-gray-400">Memuat detail menu...</p>
                     )}
 
                     {/* Quantity Selector & Add to Cart */}
@@ -176,7 +248,7 @@ export default function MenuDetailModal({ menu, isOpen, onClose, onAddToCart, in
                                 onClick={handleAddToCart}
                                 className="flex-1 rounded-full bg-orange-500 px-6 py-3 text-sm font-bold text-white shadow-md transition-all hover:bg-orange-600 hover:shadow-lg active:scale-[0.98]"
                             >
-                                Tambah - Rp {(menu.price * quantity).toLocaleString('id-ID')}
+                                Tambah - Rp {(displayMenu.price * quantity).toLocaleString('id-ID')}
                             </button>
                         </div>
                     )}

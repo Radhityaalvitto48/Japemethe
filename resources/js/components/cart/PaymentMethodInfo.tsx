@@ -13,10 +13,10 @@ export default function PaymentMethodInfo() {
                     </div>
                     <div>
                         <p className="text-sm font-semibold text-gray-800">
-                            Pembayaran via Midtrans
+                            Pembayaran difinalisasi kasir
                         </p>
                         <p className="text-xs text-gray-400">
-                            Pilihan metode pembayaran akan muncul setelah konfirmasi pesanan
+                            Tunjukkan QR pesanan ke kasir untuk pembayaran tunai atau digital Midtrans
                         </p>
                     </div>
                 </div>

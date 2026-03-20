@@ -15,9 +15,17 @@ class Table extends Model
         'is_active',
     ];
 
+    protected $appends = [
+        'id_table',
+    ];
+
     protected static function booted()
     {
         static::creating(function ($table) {
+            if ($table->seating_type === 'kursi') {
+                $table->seating_type = 'chair';
+            }
+
             // Generate nomor otomatis
             if ($table->seating_type) {
                 $prefix = $table->seating_type === 'lesehan' ? 'L-' : 'K-';
@@ -52,6 +60,11 @@ class Table extends Model
         });
     }
 
+    public function getIdTableAttribute(): int
+    {
+        return (int) $this->attributes['id'];
+    }
+
     public function orders()
     {
         return $this->hasMany(Order::class, 'table_id');
@@ -59,6 +72,6 @@ class Table extends Model
 
     public function reservations()
     {
-        return $this->hasMany(Reservation::class, 'table_id');
+        return $this->hasMany(Reservation::class, 'id_table');
     }
 }

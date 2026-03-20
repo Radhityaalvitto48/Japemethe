@@ -29,6 +29,8 @@ Route::post('/promos/validate', [PromoController::class, 'validateCode']);
 Route::prefix('orders')->group(function () {
     Route::post('/', [OrderController::class, 'store']);
     Route::post('/by-ids', [OrderController::class, 'getByIds']);
+    Route::post('/scan', [OrderController::class, 'scanQr']);
+    Route::post('/{id}/apply-promo', [OrderController::class, 'applyPromo']);
     Route::get('/{orderNumber}', [OrderController::class, 'showByNumber']);
     Route::put('/{id}/status', [OrderController::class, 'updateStatus']);
 });
@@ -43,8 +45,18 @@ Route::prefix('order-details')->group(function () {
 Route::prefix('payments')->group(function () {
     Route::post('/', [PaymentController::class, 'store']);
     Route::get('/order/{orderId}', [PaymentController::class, 'getByOrder']);
+    Route::post('/order/{id}/snap-token', [PaymentController::class, 'createSnapTokenForOrder']);
+    Route::post('/order/{id}/cash', [PaymentController::class, 'payCash']);
     Route::put('/{id}/status', [PaymentController::class, 'updateStatus']);
     Route::post('/notification', [PaymentController::class, 'handleNotification']); // Midtrans callback
+});
+
+// POS endpoints (cashier flow)
+Route::prefix('pos')->group(function () {
+    Route::post('/scan', [OrderController::class, 'scanQr']);
+    Route::post('/orders/{id}/apply-promo', [OrderController::class, 'applyPromo']);
+    Route::post('/orders/{id}/payment/snap-token', [PaymentController::class, 'createSnapTokenForOrder']);
+    Route::post('/orders/{id}/payment/cash', [PaymentController::class, 'payCash']);
 });
 
 // Reservations

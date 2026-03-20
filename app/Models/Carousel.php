@@ -52,9 +52,9 @@ class Carousel extends Model
                 if (file_exists($imagePath)) {
                     $manager = new ImageManager(new Driver());
                     $image = $manager->read($imagePath);
-                    $image->coverDown(1200, 675);
+                    $image->coverDown(960, 540);
                     $webpPath = preg_replace('/\.(jpg|jpeg|png)$/i', '.webp', $imagePath);
-                    $encodedImage = $image->toWebp(75);
+                    $encodedImage = $image->toWebp(62);
                     file_put_contents($webpPath, $encodedImage);
 
                     if ($imagePath !== $webpPath) {

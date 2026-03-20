@@ -24,4 +24,14 @@ export default defineConfig({
     esbuild: {
         jsx: 'automatic',
     },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    inertia: ['@inertiajs/react', '@inertiajs/core'],
+                    icons: ['lucide-react'],
+                },
+            },
+        },
+    },
 });

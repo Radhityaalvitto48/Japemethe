@@ -29,9 +29,9 @@ class MenuImage extends Model
                     if (file_exists($imagePath) && !str_ends_with($imagePath, '.webp')) {
                         $manager = new ImageManager(new Driver());
                         $image = $manager->read($imagePath);
-                        $image->cover(800, 800);
+                        $image->coverDown(640, 640);
                         $webpPath = preg_replace('/\.(jpg|jpeg|png)$/i', '.webp', $imagePath);
-                        $encodedImage = $image->toWebp(90);
+                        $encodedImage = $image->toWebp(68);
                         file_put_contents($webpPath, $encodedImage);
                         if ($imagePath !== $webpPath) {
                             unlink($imagePath);

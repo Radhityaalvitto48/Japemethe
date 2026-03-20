@@ -1,18 +1,19 @@
 import { Head, router } from '@inertiajs/react';
-import { useCallback, useState, useEffect } from 'react';
+import { lazy, Suspense, useCallback, useState, useEffect } from 'react';
 import {
     BottomNavigation,
     CartBar,
-    CartModal,
     CategoryList,
     Header,
-    MenuDetailModal,
     MenuGrid,
     PromoSection,
     SearchBar,
 } from '@/components/menu';
 import { getMenuImage, type Menu } from '@/components/menu/MenuGrid';
 import { TableProvider, useTable, CartProvider, useCart } from '@/contexts';
+
+const MenuDetailModal = lazy(() => import('@/components/menu/MenuDetailModal'));
+const CartModal = lazy(() => import('@/components/menu/CartModal'));
 
 // Types
 interface Table {
@@ -21,18 +22,6 @@ interface Table {
     seating_type: 'lesehan' | 'kursi';
     qr_code: string;
     is_active: boolean;
-}
-
-interface Promo {
-    id: number;
-    code: string;
-    name: string;
-    type: string;
-    value: number;
-    minimum_price: number;
-    status_promo: string;
-    valid_from: string;
-    valid_until: string;
 }
 
 interface MenuCategory {
@@ -52,24 +41,20 @@ interface Banner {
 interface Props {
     menus: Menu[];
     categories: MenuCategory[];
-    promos: Promo[];
     banners?: Banner[];
-    recommendedMenus: Menu[];
     selectedCategory?: number;
     searchQuery?: string;
     currentTable?: Table;
 }
 
-export default function MenuPage({ menus, categories, promos, banners, recommendedMenus, selectedCategory, searchQuery, currentTable }: Props) {
+export default function MenuPage({ menus, categories, banners, selectedCategory, searchQuery, currentTable }: Props) {
     return (
         <TableProvider>
         <CartProvider>
             <MenuPageContent
                 menus={menus}
                 categories={categories}
-                promos={promos}
                 banners={banners}
-                recommendedMenus={recommendedMenus}
                 selectedCategory={selectedCategory}
                 searchQuery={searchQuery}
                 currentTable={currentTable}
@@ -79,7 +64,7 @@ export default function MenuPage({ menus, categories, promos, banners, recommend
     );
 }
 
-function MenuPageContent({ menus, categories, promos, banners, recommendedMenus, selectedCategory, searchQuery, currentTable }: Props) {
+function MenuPageContent({ menus, categories, banners, selectedCategory, searchQuery, currentTable }: Props) {
     const { setCurrentTable } = useTable();
     const { cart, addToCart: ctxAddToCart, setItemQuantity, increment: ctxIncrement, decrement: ctxDecrement, remove: ctxRemove, updateNote: ctxUpdateNote, totalItems: totalCartItems } = useCart();
     const [search, setSearch] = useState(searchQuery || '');
@@ -98,13 +83,21 @@ function MenuPageContent({ menus, categories, promos, banners, recommendedMenus,
     // Handle search
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        router.get('/', { search: search, category_id: activeCategory }, { preserveState: true, preserveScroll: true });
+        router.get('/', { search: search, category_id: activeCategory }, {
+            preserveState: true,
+            preserveScroll: true,
+            only: ['menus', 'selectedCategory', 'searchQuery'],
+        });
     };
 
     // Handle category filter
     const handleCategoryClick = (categoryId: number | null) => {
         setActiveCategory(categoryId);
-        router.get('/', { search: search, category_id: categoryId }, { preserveState: true, preserveScroll: true });
+        router.get('/', { search: search, category_id: categoryId }, {
+            preserveState: true,
+            preserveScroll: true,
+            only: ['menus', 'selectedCategory', 'searchQuery'],
+        });
     };
 
     // Add to cart (from + button on card)
@@ -242,25 +235,33 @@ function MenuPageContent({ menus, categories, promos, banners, recommendedMenus,
                 <CartBar items={cart} onCartClick={handleCartClick} />
 
                 {/* Menu Detail Modal */}
-                <MenuDetailModal
-                    menu={selectedMenu}
-                    isOpen={isDetailOpen}
-                    onClose={handleCloseDetail}
-                    onAddToCart={handleAddFromDetail}
-                    initialQuantity={selectedMenu ? getCartQuantity(selectedMenu.id) : 0}
-                />
+                {isDetailOpen && (
+                    <Suspense fallback={null}>
+                        <MenuDetailModal
+                            menu={selectedMenu}
+                            isOpen={isDetailOpen}
+                            onClose={handleCloseDetail}
+                            onAddToCart={handleAddFromDetail}
+                            initialQuantity={selectedMenu ? getCartQuantity(selectedMenu.id) : 0}
+                        />
+                    </Suspense>
+                )}
 
                 {/* Cart Modal */}
-                <CartModal
-                    items={cart}
-                    isOpen={isCartOpen}
-                    onClose={() => setIsCartOpen(false)}
-                    onIncrement={handleIncrement}
-                    onDecrement={handleDecrement}
-                    onRemove={handleRemove}
-                    onUpdateNote={handleUpdateNote}
-                    onOrder={handleOrder}
-                />
+                {isCartOpen && (
+                    <Suspense fallback={null}>
+                        <CartModal
+                            items={cart}
+                            isOpen={isCartOpen}
+                            onClose={() => setIsCartOpen(false)}
+                            onIncrement={handleIncrement}
+                            onDecrement={handleDecrement}
+                            onRemove={handleRemove}
+                            onUpdateNote={handleUpdateNote}
+                            onOrder={handleOrder}
+                        />
+                    </Suspense>
+                )}
 
                 <BottomNavigation
                     activeTab="home"

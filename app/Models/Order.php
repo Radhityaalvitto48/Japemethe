@@ -32,7 +32,7 @@ class Order extends Model
 
     public function orderPromo()
     {
-        return $this->hasMany(Promo::class, 'promo_id');
+        return $this->belongsTo(Promo::class, 'promo_id');
     }
 
     public function payment()

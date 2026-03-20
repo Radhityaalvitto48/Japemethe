@@ -3,119 +3,66 @@
 namespace App\Http\Controllers;
 
 use App\Models\Promo;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
-class PromoController extends Controller
+class PromoController extends \App\Http\Controllers\Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function validateCode(Request $request): JsonResponse
     {
-        $promos = Promo::where('status_promo', 'active')
-            ->where('valid_from', '<=', now())
-            ->where('valid_until', '>=', now())
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => $promos
-        ]);
-    }
-
-    /**
-     * Validate promo code.
-     */
-    public function validateCode(Request $request)
-    {
-        $request->validate([
-            'code' => 'required|string|max:30',
-            'total_price' => 'nullable|numeric|min:0',
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'max:30'],
+            'total_price' => ['required', 'numeric', 'min:0'],
         ]);
 
-        $promo = Promo::where('code', strtoupper($request->code))
+        $promo = Promo::query()
+            ->whereRaw('UPPER(code) = ?', [Str::upper(trim($validated['code']))])
             ->where('status_promo', 'active')
-            ->where('valid_from', '<=', now())
-            ->where('valid_until', '>=', now())
+            ->whereDate('valid_from', '<=', now()->toDateString())
+            ->whereDate('valid_until', '>=', now()->toDateString())
             ->first();
 
-        if (!$promo) {
+        if (! $promo instanceof Promo) {
             return response()->json([
                 'success' => false,
-                'message' => 'Kode promo tidak valid atau sudah kadaluarsa'
-            ]);
+                'message' => 'Kode promo tidak valid atau sudah tidak aktif.',
+            ], 422);
         }
 
-        // Cek minimum price jika total_price diberikan
-        if ($request->total_price && $request->total_price < $promo->minimum_price) {
+        $totalPrice = (float) $validated['total_price'];
+        if ($totalPrice < (float) $promo->minimum_price) {
             return response()->json([
                 'success' => false,
-                'message' => 'Minimum pembelian untuk promo ini adalah Rp ' . number_format($promo->minimum_price, 0, ',', '.')
-            ]);
+                'message' => sprintf(
+                    'Promo hanya berlaku untuk minimal transaksi Rp %s.',
+                    number_format((float) $promo->minimum_price, 0, ',', '.')
+                ),
+            ], 422);
         }
 
-        // Hitung diskon
-        $discountAmount = 0;
-        if ($request->total_price) {
-            if ($promo->type === 'percentage') {
-                $discountAmount = ($request->total_price * $promo->value) / 100;
-            } else {
-                $discountAmount = $promo->value;
-            }
-        }
+        $discount = $this->calculateDiscount($promo, $totalPrice);
 
         return response()->json([
             'success' => true,
-            'message' => 'Kode promo valid',
             'data' => [
-                'promo' => $promo,
-                'discount_amount' => $discountAmount,
-                'final_price' => $request->total_price ? max(0, $request->total_price - $discountAmount) : null,
-            ]
+                'id' => $promo->id,
+                'code' => $promo->code,
+                'name' => $promo->name,
+                'type' => $promo->type,
+                'value' => (float) $promo->value,
+                'minimum_price' => (float) $promo->minimum_price,
+                'discount_amount' => $discount,
+            ],
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    private function calculateDiscount(Promo $promo, float $totalPrice): float
     {
-        //
-    }
+        $discount = $promo->type === 'percentage'
+            ? ($totalPrice * ((float) $promo->value / 100))
+            : (float) $promo->value;
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        $promo = Promo::find($id);
-
-        if (!$promo) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Promo tidak ditemukan'
-            ], 404);
-        }
-
-        return response()->json([
-            'success' => true,
-            'data' => $promo
-        ]);
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        return (float) min($discount, $totalPrice);
     }
 }
