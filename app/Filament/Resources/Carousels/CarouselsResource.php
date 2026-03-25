@@ -7,14 +7,14 @@ use App\Filament\Resources\Carousels\Pages\EditCarousels;
 use App\Filament\Resources\Carousels\Pages\ListCarousels;
 use App\Filament\Resources\Carousels\Schemas\CarouselsForm;
 use App\Filament\Resources\Carousels\Tables\CarouselsTable;
+use App\Filament\Resources\BaseAdminResource;
 use App\Models\Carousel;
 use BackedEnum;
-use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-class CarouselsResource extends Resource
+class CarouselsResource extends BaseAdminResource
 {
     protected static ?string $model = Carousel::class;
 

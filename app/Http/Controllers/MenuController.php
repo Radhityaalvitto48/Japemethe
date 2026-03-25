@@ -168,6 +168,13 @@ class MenuController extends \App\Http\Controllers\Controller
             'is_recommended' => (bool) $menu->is_recommended,
             'status_menu' => $menu->status_menu,
             'image_url' => $menu->image_url,
+            'menu_images' => $menu->relationLoaded('menuImages')
+                ? $menu->menuImages->map(fn ($image) => [
+                    'id' => $image->id,
+                    'menu_id' => $image->menu_id,
+                    'image' => $image->image,
+                ])->values()
+                : [],
             'menu_category' => [
                 'id' => $menu->menuCategory?->id,
                 'name' => $menu->menuCategory?->name,

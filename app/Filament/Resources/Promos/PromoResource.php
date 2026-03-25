@@ -7,14 +7,14 @@ use App\Filament\Resources\Promos\Pages\EditPromo;
 use App\Filament\Resources\Promos\Pages\ListPromos;
 use App\Filament\Resources\Promos\Schemas\PromoForm;
 use App\Filament\Resources\Promos\Tables\PromosTable;
+use App\Filament\Resources\BaseAdminResource;
 use App\Models\Promo;
 use BackedEnum;
-use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-class PromoResource extends Resource
+class PromoResource extends BaseAdminResource
 {
     protected static ?string $model = Promo::class;
 

@@ -7,14 +7,14 @@ use App\Filament\Resources\MenuCategories\Pages\EditMenuCategory;
 use App\Filament\Resources\MenuCategories\Pages\ListMenuCategories;
 use App\Filament\Resources\MenuCategories\Schemas\MenuCategoryForm;
 use App\Filament\Resources\MenuCategories\Tables\MenuCategoriesTable;
+use App\Filament\Resources\BaseAdminResource;
 use App\Models\MenuCategory;
 use BackedEnum;
-use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-class MenuCategoryResource extends Resource
+class MenuCategoryResource extends BaseAdminResource
 {
     protected static ?string $model = MenuCategory::class;
 

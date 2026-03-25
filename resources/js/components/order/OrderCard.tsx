@@ -118,7 +118,7 @@ export default function OrderCard({ order }: OrderCardProps) {
                             {item.quantity}x {item.menu?.name || 'Menu'}
                         </span>
                         <span className="text-gray-500">
-                            Rp {item.subtotal.toLocaleString('id-ID')}
+                            Rp { (item.subtotal * 1).toLocaleString('id-ID') }
                         </span>
                     </div>
                 ))}
@@ -168,7 +168,7 @@ export default function OrderCard({ order }: OrderCardProps) {
                 </div>
                 <div className="text-right">
                     <span className="text-sm font-bold text-orange-500">
-                        Rp {order.total_price.toLocaleString('id-ID')}
+                        Rp { (order.total_price * 1).toLocaleString('id-ID') }
                     </span>
                 </div>
             </div>

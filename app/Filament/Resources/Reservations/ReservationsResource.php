@@ -7,14 +7,14 @@ use App\Filament\Resources\Reservations\Pages\EditReservations;
 use App\Filament\Resources\Reservations\Pages\ListReservations;
 use App\Filament\Resources\Reservations\Schemas\ReservationsForm;
 use App\Filament\Resources\Reservations\Tables\ReservationsTable;
+use App\Filament\Resources\BaseAdminResource;
 use App\Models\Reservation;
 use BackedEnum;
-use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-class ReservationsResource extends Resource
+class ReservationsResource extends BaseAdminResource
 {
     protected static ?string $model = Reservation::class;
 

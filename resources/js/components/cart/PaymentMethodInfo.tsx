@@ -15,9 +15,6 @@ export default function PaymentMethodInfo() {
                         <p className="text-sm font-semibold text-gray-800">
                             Pembayaran difinalisasi kasir
                         </p>
-                        <p className="text-xs text-gray-400">
-                            Tunjukkan QR pesanan ke kasir untuk pembayaran tunai atau digital Midtrans
-                        </p>
                     </div>
                 </div>
             </div>

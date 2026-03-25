@@ -7,14 +7,14 @@ use App\Filament\Resources\OrderDetails\Pages\EditOrderDetails;
 use App\Filament\Resources\OrderDetails\Pages\ListOrderDetails;
 use App\Filament\Resources\OrderDetails\Schemas\OrderDetailsForm;
 use App\Filament\Resources\OrderDetails\Tables\OrderDetailsTable;
+use App\Filament\Resources\BaseAdminResource;
 use App\Models\OrderDetail;
 use BackedEnum;
-use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-class OrderDetailsResource extends Resource
+class OrderDetailsResource extends BaseAdminResource
 {
     protected static ?string $model = OrderDetail::class;
 

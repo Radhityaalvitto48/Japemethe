@@ -10,15 +10,14 @@ use Filament\Models\Contracts\FilamentUser;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    public function cantAccessPanel(Panel $panel): bool
+    public function canAccessPanel(Panel $panel): bool
     {
-        return str_ends_with($this->email, '@admin.com') || $this->role === 'admin';
-
+        return in_array($this->role, ['admin', 'kasir'], true);
     }
 
     /**

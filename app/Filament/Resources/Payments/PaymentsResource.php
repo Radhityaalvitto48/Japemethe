@@ -7,14 +7,14 @@ use App\Filament\Resources\Payments\Pages\EditPayments;
 use App\Filament\Resources\Payments\Pages\ListPayments;
 use App\Filament\Resources\Payments\Schemas\PaymentsForm;
 use App\Filament\Resources\Payments\Tables\PaymentsTable;
+use App\Filament\Resources\BaseAdminResource;
 use App\Models\Payment;
 use BackedEnum;
-use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-class PaymentsResource extends Resource
+class PaymentsResource extends BaseAdminResource
 {
     protected static ?string $model = Payment::class;
 

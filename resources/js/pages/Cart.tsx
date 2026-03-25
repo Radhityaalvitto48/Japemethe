@@ -8,7 +8,6 @@ import {
     CartEmptyState,
     CartItemCard,
     CustomerDetailsForm,
-    PaymentMethodInfo,
     CartSummary,
 } from '@/components/cart';
 
@@ -33,6 +32,7 @@ function CartPageContent() {
     const [promoDiscount, setPromoDiscount] = useState(0);
     const [promoApplied, setPromoApplied] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [orderError, setOrderError] = useState('');
     const finalTotal = Math.max(0, totalPrice - promoDiscount);
 
     const handlePromoChange = (value: string) => {
@@ -78,6 +78,7 @@ function CartPageContent() {
         if (isSubmitting) return;
 
         setIsSubmitting(true);
+        setOrderError('');
 
         try {
             const res = await fetch('/api/orders', {
@@ -99,7 +100,7 @@ function CartPageContent() {
             const data = await res.json();
 
             if (!data.success || !data.data?.id) {
-                alert(data.message || 'Gagal membuat pesanan');
+                setOrderError(data.message || 'Gagal membuat pesanan');
                 setIsSubmitting(false);
                 return;
             }
@@ -113,9 +114,10 @@ function CartPageContent() {
             }
 
             clearCart();
-            router.get('/orders');
+            setOrderError('');
+            router.get('/order');
         } catch {
-            alert('Terjadi kesalahan, coba lagi.');
+            setOrderError('Terjadi kesalahan, coba lagi.');
             setIsSubmitting(false);
         }
     };
@@ -132,7 +134,17 @@ function CartPageContent() {
                     <CartEmptyState />
                 ) : (
                     <div className="pb-36">
-                        {/* Cart Items */}
+                        {orderError && (
+                            <div className="m-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                                <p className="text-sm font-semibold text-red-700">
+                                    Oops! Pesanan Gagal Dibuat
+                                </p>
+                                <p className="mt-1 text-xs text-red-600">
+                                    {orderError}
+                                </p>
+                            </div>
+                        )}
+
                         <section className="px-4 pt-4">
                             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
                                 Pesanan Kamu
@@ -171,8 +183,6 @@ function CartPageContent() {
                             onValidatePromo={handleValidatePromo}
                         />
 
-                        <PaymentMethodInfo />
-
                         <CartSummary
                             totalItems={totalItems}
                             totalPrice={totalPrice}
@@ -183,7 +193,6 @@ function CartPageContent() {
                     </div>
                 )}
 
-                {/* Fixed bottom order button */}
                 {cart.length > 0 && (
                     <div className="fixed bottom-0 left-1/2 z-40 w-full max-w-lg -translate-x-1/2 bg-white border-t border-gray-100 px-4 py-4 lg:max-w-3xl">
                         <button
@@ -191,7 +200,7 @@ function CartPageContent() {
                             disabled={isSubmitting}
                             className="w-full rounded-full bg-orange-500 py-3.5 text-sm font-bold text-white shadow-md shadow-orange-500/25 transition-all hover:bg-orange-600 hover:shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isSubmitting ? 'Memproses...' : `Kirim Pesanan — Rp ${finalTotal.toLocaleString('id-ID')}`}
+                            {isSubmitting ? 'Memproses...' : `Kirim Pesanan  Rp ${finalTotal.toLocaleString('id-ID')}`}
                         </button>
                     </div>
                 )}

@@ -6,471 +6,368 @@ use App\Http\Requests\StoreOrderRequest;
 use App\Models\Menu;
 use App\Models\Order;
 use App\Models\OrderDetail;
-use App\Models\OrderPromo;
+use App\Models\Payment;
 use App\Models\Promo;
 use App\Models\Table;
-use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Midtrans\Snap;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Throwable;
 
-class OrderController extends \App\Http\Controllers\Controller
+class OrderController extends Controller
 {
-    public function store(StoreOrderRequest $request): JsonResponse
-    {
-        $validated = $request->validated();
+	public function store(StoreOrderRequest $request): JsonResponse
+	{
+		$validated = $request->validated();
 
-        $table = Table::query()
-            ->whereKey($validated['table_id'])
-            ->where('is_active', true)
-            ->first();
+		$table = Table::query()
+			->whereKey($validated['table_id'])
+			->where('is_active', true)
+			->first();
 
-        if (! $table) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Meja tidak ditemukan atau tidak aktif.',
-            ], 422);
-        }
+		if (! $table) {
+			return response()->json([
+				'success' => false,
+				'message' => 'Meja tidak ditemukan atau tidak aktif.',
+			], 422);
+		}
 
-        $menuIds = collect($validated['items'])
-            ->pluck('menu_id')
-            ->unique()
-            ->values();
+		$menuIds = collect($validated['items'])
+			->pluck('menu_id')
+			->unique()
+			->values();
 
-        $menuMap = Menu::query()
-            ->whereIn('id', $menuIds)
-            ->get()
-            ->keyBy('id');
+		$menuMap = Menu::query()
+			->whereIn('id', $menuIds)
+			->get()
+			->keyBy('id');
 
-        if ($menuMap->count() !== $menuIds->count()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Ada menu yang tidak ditemukan.',
-            ], 422);
-        }
+		if ($menuMap->count() !== $menuIds->count()) {
+			return response()->json([
+				'success' => false,
+				'message' => 'Ada menu yang tidak ditemukan.',
+			], 422);
+		}
 
-        $orderItems = [];
-        $totalItems = 0;
-        $baseTotal = 0.0;
+		$orderItems = [];
+		$totalItems = 0;
+		$baseTotal = 0.0;
 
-        foreach ($validated['items'] as $item) {
-            /** @var Menu $menu */
-            $menu = $menuMap[$item['menu_id']];
+		foreach ($validated['items'] as $item) {
+			/** @var Menu|null $menu */
+			$menu = $menuMap->get((int) $item['menu_id']);
 
-            if ($menu->status_menu !== 'available') {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Menu {$menu->name} sedang tidak tersedia.",
-                ], 422);
-            }
+			if (! $menu) {
+				return response()->json([
+					'success' => false,
+					'message' => 'Menu tidak ditemukan.',
+				], 422);
+			}
 
-            if ((int) $menu->stock < (int) $item['quantity']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Stok menu {$menu->name} tidak mencukupi.",
-                ], 422);
-            }
+			if ($menu->status_menu !== 'available') {
+				return response()->json([
+					'success' => false,
+					'message' => "Menu {$menu->name} sedang tidak tersedia.",
+				], 422);
+			}
 
-            $quantity = (int) $item['quantity'];
-            $unitPrice = (float) $menu->price;
-            $subtotal = $unitPrice * $quantity;
+			if ((int) $menu->stock < (int) $item['quantity']) {
+				return response()->json([
+					'success' => false,
+					'message' => "Stok menu {$menu->name} tidak mencukupi.",
+				], 422);
+			}
 
-            $orderItems[] = [
-                'menu_id' => $menu->id,
-                'quantity' => $quantity,
-                'unit_price' => $unitPrice,
-                'subtotal' => $subtotal,
-                'note' => $item['note'] ?? null,
-            ];
+			$quantity = (int) $item['quantity'];
+			$unitPrice = (float) $menu->price;
+			$subtotal = $unitPrice * $quantity;
 
-            $totalItems += $quantity;
-            $baseTotal += $subtotal;
-        }
+			$orderItems[] = [
+				'menu_id' => (int) $menu->id,
+				'name' => (string) $menu->name,
+				'quantity' => $quantity,
+				'unit_price' => $unitPrice,
+				'subtotal' => $subtotal,
+				'note' => $item['note'] ?? null,
+			];
 
-        $promo = null;
-        $promoDiscount = 0.0;
-        $finalTotal = $baseTotal;
+			$totalItems += $quantity;
+			$baseTotal += $subtotal;
+		}
 
-        if (! empty($validated['promo_code'])) {
-            $promo = $this->findValidPromo($validated['promo_code']);
+		$promo = null;
+		$discountAmount = 0.0;
+		$finalTotal = $baseTotal;
 
-            if (! $promo) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Kode promo tidak valid atau tidak aktif.',
-                ], 422);
-            }
+		if (! empty($validated['promo_code'])) {
+			$promo = $this->findValidPromo((string) $validated['promo_code']);
 
-            if ($baseTotal < (float) $promo->minimum_price) {
-                return response()->json([
-                    'success' => false,
-                    'message' => sprintf(
-                        'Promo hanya berlaku untuk minimal transaksi Rp %s.',
-                        number_format((float) $promo->minimum_price, 0, ',', '.')
-                    ),
-                ], 422);
-            }
+			if (! $promo) {
+				return response()->json([
+					'success' => false,
+					'message' => 'Kode promo tidak valid atau tidak aktif.',
+				], 422);
+			}
 
-            $promoDiscount = $this->calculatePromoDiscount($promo, $baseTotal);
-            $finalTotal = max(0, $baseTotal - $promoDiscount);
-        }
+			if ($baseTotal < (float) $promo->minimum_price) {
+				return response()->json([
+					'success' => false,
+					'message' => sprintf(
+						'Promo hanya berlaku untuk minimal transaksi Rp %s.',
+						number_format((float) $promo->minimum_price, 0, ',', '.')
+					),
+				], 422);
+			}
 
-        $order = DB::transaction(function () use ($validated, $orderItems, $totalItems, $promo, $promoDiscount, $finalTotal): Order {
-            $order = Order::create([
-                'table_id' => $validated['table_id'],
-                'total_items' => $totalItems,
-                'total_price' => $finalTotal,
-                'status_order' => 'pending',
-                'customer_email' => $validated['customer_email'] ?? null,
-                'customer_phone' => $validated['customer_phone'] ?? null,
-                'ordered_at' => now(),
-                'promo_id' => $promo?->id,
-            ]);
+			$discountAmount = $this->calculatePromoDiscount($promo, $baseTotal);
+			$finalTotal = max(0, $baseTotal - $discountAmount);
+		}
 
-            foreach ($orderItems as $item) {
-                OrderDetail::create([
-                    'order_id' => $order->id,
-                    'menu_id' => $item['menu_id'],
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'],
-                    'subtotal' => $item['subtotal'],
-                    'note' => $item['note'],
-                ]);
-            }
+		DB::beginTransaction();
 
-            if ($promo && $promoDiscount > 0) {
-                OrderPromo::query()->create([
-                    'order_id' => $order->id,
-                    'promo_id' => $promo->id,
-                    'discount_amount' => $promoDiscount,
-                ]);
-            }
+		try {
+			$order = Order::query()->create([
+				'table_id' => (int) $validated['table_id'],
+				'total_items' => $totalItems,
+				'total_price' => $finalTotal,
+				'status_order' => 'pending',
+				'customer_email' => $validated['customer_email'] ?? null,
+				'customer_phone' => $validated['customer_phone'] ?? null,
+				'ordered_at' => now(),
+				'promo_id' => $promo?->id,
+			]);
 
-            return $order;
-        });
+			$itemDetails = [];
+			$grossAmountFromItems = 0;
 
-        $order->load([
-            'table:id,table_number',
-            'orderDetails.menu:id,name',
-            'payment',
-        ]);
+			foreach ($orderItems as $item) {
+				OrderDetail::query()->create([
+					'order_id' => $order->id,
+					'menu_id' => $item['menu_id'],
+					'quantity' => $item['quantity'],
+					'unit_price' => $item['unit_price'],
+					'subtotal' => $item['subtotal'],
+					'note' => $item['note'],
+				]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Pesanan berhasil dibuat. Tunjukkan QR ke kasir untuk validasi pembayaran.',
-            'data' => $this->transformOrder($order),
-        ], 201);
-    }
+				$price = (int) round((float) $item['unit_price']);
 
-    public function getByIds(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'ids' => ['required', 'array'],
-            'ids.*' => ['integer'],
-        ]);
+				$itemDetails[] = [
+					'id' => (string) $item['menu_id'],
+					'price' => $price,
+					'quantity' => (int) $item['quantity'],
+					'name' => Str::limit((string) $item['name'], 50, ''),
+				];
 
-        $ids = collect($validated['ids'])
-            ->filter(fn ($id) => is_numeric($id))
-            ->map(fn ($id) => (int) $id)
-            ->values();
+				$grossAmountFromItems += $price * (int) $item['quantity'];
+			}
 
-        if ($ids->isEmpty()) {
-            return response()->json([
-                'success' => true,
-                'data' => [],
-            ]);
-        }
+			$grossAmount = (int) round($finalTotal);
 
-        $orders = Order::query()
-            ->with([
-                'table:id,table_number',
-                'orderDetails.menu:id,name',
-                'payment',
-            ])
-            ->whereIn('id', $ids)
-            ->orderByDesc('ordered_at')
-            ->get()
-            ->map(fn (Order $order) => $this->transformOrder($order))
-            ->values();
+			if ($grossAmount < $grossAmountFromItems) {
+				$itemDetails[] = [
+					'id' => 'DISCOUNT',
+					'price' => -($grossAmountFromItems - $grossAmount),
+					'quantity' => 1,
+					'name' => 'Diskon Promo',
+				];
+			}
 
-        return response()->json([
-            'success' => true,
-            'data' => $orders,
-        ]);
-    }
+			if ($grossAmount <= 0) {
+				$grossAmount = 1;
+			}
 
-    public function showByNumber(string $orderNumber): JsonResponse
-    {
-        $order = Order::query()
-            ->with([
-                'table:id,table_number',
-                'orderDetails.menu:id,name',
-                'payment',
-            ])
-            ->where('order_number', $orderNumber)
-            ->first();
+			$midtransOrderId = 'ORDER-' . $order->id . '-' . time();
 
-        if (! $order) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Order tidak ditemukan.',
-            ], 404);
-        }
+			$snapToken = Snap::getSnapToken([
+				'transaction_details' => [
+					'order_id' => $midtransOrderId,
+					'gross_amount' => $grossAmount,
+				],
+				'item_details' => $itemDetails,
+				'customer_details' => [
+					'email' => $order->customer_email ?? 'guest@japemethe.com',
+					'phone' => $order->customer_phone ?? '',
+				],
+			]);
 
-        return response()->json([
-            'success' => true,
-            'data' => $this->transformOrder($order),
-        ]);
-    }
+			Payment::query()->create([
+				'order_id' => $order->id,
+				'payment_method' => 'midtrans_snap',
+				'status_payment' => 'pending',
+				'grass_amount' => $grossAmount,
+				'snap_token' => $snapToken,
+				'payment_date' => null,
+			]);
 
-    public function updateStatus(Request $request, int $id): JsonResponse
-    {
-        $validated = $request->validate([
-            'status_order' => ['required', 'in:pending,in_progress,completed,cancelled'],
-        ]);
+			DB::commit();
 
-        $order = Order::query()->find($id);
-        if (! $order) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Order tidak ditemukan.',
-            ], 404);
-        }
+			$order->load([
+				'table:id,table_number',
+				'orderDetails.menu:id,name',
+				'payment',
+			]);
 
-        $order->update([
-            'status_order' => $validated['status_order'],
-        ]);
+			return response()->json([
+				'success' => true,
+				'message' => 'Order berhasil dibuat.',
+				'data' => $this->withQrData($order),
+				'snap_token' => $snapToken,
+			], 201);
+		} catch (Throwable $exception) {
+			DB::rollBack();
+			report($exception);
 
-        $order->load([
-            'table:id,table_number',
-            'orderDetails.menu:id,name',
-            'payment',
-        ]);
+			return response()->json([
+				'success' => false,
+				'message' => 'Gagal membuat order.',
+			], 500);
+		}
+	}
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Status order berhasil diperbarui.',
-            'data' => $this->transformOrder($order),
-        ]);
-    }
+	public function getByIds(Request $request): JsonResponse
+	{
+		$validated = $request->validate([
+			'ids' => ['required', 'array'],
+			'ids.*' => ['integer'],
+		]);
 
-    public function scanQr(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'qr_payload' => ['required', 'string'],
-        ]);
+		$orders = Order::query()
+			->with([
+				'table:id,table_number',
+				'orderDetails.menu:id,name',
+				'payment',
+			])
+			->whereIn('id', $validated['ids'])
+			->orderByDesc('created_at')
+			->get()
+			->map(fn (Order $order) => $this->withQrData($order))
+			->values();
 
-        $orderNumber = $this->decodeQrPayload($validated['qr_payload']);
-        if (! $orderNumber) {
-            return response()->json([
-                'success' => false,
-                'message' => 'QR tidak valid.',
-            ], 422);
-        }
+		return response()->json([
+			'success' => true,
+			'data' => $orders,
+		]);
+	}
 
-        $order = Order::query()
-            ->with([
-                'table:id,table_number',
-                'orderDetails.menu:id,name',
-                'payment',
-            ])
-            ->where('order_number', $orderNumber)
-            ->first();
+	public function showByNumber(string $orderNumber): JsonResponse
+	{
+		$order = Order::query()
+			->with([
+				'table:id,table_number',
+				'orderDetails.menu:id,name',
+				'payment',
+			])
+			->where('order_number', $orderNumber)
+			->first();
 
-        if (! $order) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Order tidak ditemukan.',
-            ], 404);
-        }
+		if (! $order) {
+			return response()->json([
+				'success' => false,
+				'message' => 'Order tidak ditemukan.',
+			], 404);
+		}
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Order berhasil ditemukan.',
-            'data' => $this->transformOrder($order),
-        ]);
-    }
+		return response()->json([
+			'success' => true,
+			'data' => $this->withQrData($order),
+		]);
+	}
 
-    public function applyPromo(Request $request, int $id): JsonResponse
-    {
-        $validated = $request->validate([
-            'promo_code' => ['required', 'string', 'max:30'],
-        ]);
+	public function updateStatus(Request $request, int $id): JsonResponse
+	{
+		$validated = $request->validate([
+			'status_order' => ['required', 'in:pending,in_progress,completed,cancelled'],
+		]);
 
-        $order = Order::query()
-            ->with(['orderDetails', 'payment', 'table:id,table_number', 'orderDetails.menu:id,name'])
-            ->find($id);
+		$order = Order::query()->find($id);
 
-        if (! $order) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Order tidak ditemukan.',
-            ], 404);
-        }
+		if (! $order) {
+			return response()->json([
+				'success' => false,
+				'message' => 'Order tidak ditemukan.',
+			], 404);
+		}
 
-        if (in_array($order->status_order, ['completed', 'cancelled'], true)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Order sudah final dan tidak bisa diubah.',
-            ], 422);
-        }
+		$order->update([
+			'status_order' => $validated['status_order'],
+		]);
 
-        $promo = $this->findValidPromo($validated['promo_code']);
-        if (! $promo) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Kode promo tidak valid atau tidak aktif.',
-            ], 422);
-        }
+		return response()->json([
+			'success' => true,
+			'message' => 'Status order berhasil diperbarui.',
+			'data' => $order->fresh(),
+		]);
+	}
 
-        $baseTotal = (float) $order->orderDetails->sum('subtotal');
-        if ($baseTotal < (float) $promo->minimum_price) {
-            return response()->json([
-                'success' => false,
-                'message' => sprintf(
-                    'Promo hanya berlaku untuk minimal transaksi Rp %s.',
-                    number_format((float) $promo->minimum_price, 0, ',', '.')
-                ),
-            ], 422);
-        }
+	private function findValidPromo(string $code): ?Promo
+	{
+		return Promo::query()
+			->whereRaw('UPPER(code) = ?', [Str::upper(trim($code))])
+			->where('status_promo', 'active')
+			->whereDate('valid_from', '<=', now()->toDateString())
+			->whereDate('valid_until', '>=', now()->toDateString())
+			->first();
+	}
 
-        $discount = $this->calculatePromoDiscount($promo, $baseTotal);
-        $finalTotal = max(0, $baseTotal - $discount);
+	private function calculatePromoDiscount(Promo $promo, float $baseTotal): float
+	{
+		$discount = $promo->type === 'percentage'
+			? ($baseTotal * ((float) $promo->value / 100))
+			: (float) $promo->value;
 
-        DB::transaction(function () use ($order, $promo, $discount, $finalTotal): void {
-            $order->update([
-                'promo_id' => $promo->id,
-                'total_price' => $finalTotal,
-            ]);
+		return (float) min($baseTotal, $discount);
+	}
 
-            OrderPromo::query()->updateOrCreate(
-                ['order_id' => $order->id],
-                [
-                    'promo_id' => $promo->id,
-                    'discount_amount' => $discount,
-                ],
-            );
-        });
+	private function withQrData(Order $order): array
+	{
+		$data = $order->toArray();
 
-        $order->refresh()->load([
-            'table:id,table_number',
-            'orderDetails.menu:id,name',
-            'payment',
-        ]);
+		if (($order->status_order ?? null) !== 'pending') {
+			$data['qr_payload'] = null;
+			$data['qr_code_data_uri'] = null;
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Promo berhasil diterapkan.',
-            'data' => [
-                'order' => $this->transformOrder($order),
-                'promo' => [
-                    'id' => $promo->id,
-                    'code' => $promo->code,
-                    'name' => $promo->name,
-                    'discount_amount' => $discount,
-                ],
-            ],
-        ]);
-    }
+			return $data;
+		}
 
-    private function transformOrder(Order $order): array
-    {
-        $baseTotal = (float) $order->orderDetails->sum('subtotal');
-        $discountAmount = max(0, $baseTotal - (float) $order->total_price);
-        $qrData = $this->buildQrData($order->order_number);
+		$qrData = $this->buildQrData($order);
+		$data['qr_payload'] = $qrData['payload'];
+		$data['qr_code_data_uri'] = $qrData['data_uri'];
 
-        return [
-            'id' => $order->id,
-            'order_number' => $order->order_number,
-            'total_items' => (int) $order->total_items,
-            'total_price' => (float) $order->total_price,
-            'status_order' => $order->status_order,
-            'customer_phone' => $order->customer_phone,
-            'customer_email' => $order->customer_email,
-            'ordered_at' => $order->ordered_at,
-            'created_at' => $order->created_at,
-            'table' => $order->table ? [
-                'id' => $order->table->id,
-                'id_table' => $order->table->id,
-                'table_number' => $order->table->table_number,
-            ] : null,
-            'order_details' => $order->orderDetails->map(function (OrderDetail $detail) {
-                return [
-                    'id' => $detail->id,
-                    'menu_id' => $detail->menu_id,
-                    'quantity' => (int) $detail->quantity,
-                    'unit_price' => (float) $detail->unit_price,
-                    'subtotal' => (float) $detail->subtotal,
-                    'note' => $detail->note,
-                    'menu' => $detail->menu ? [
-                        'id' => $detail->menu->id,
-                        'id_menu' => $detail->menu->id,
-                        'name' => $detail->menu->name,
-                    ] : null,
-                ];
-            })->values(),
-            'payment' => $order->payment ? [
-                'id' => $order->payment->id,
-                'payment_method' => $order->payment->payment_method,
-                'status_payment' => $order->payment->status_payment,
-                'grass_amount' => (float) $order->payment->grass_amount,
-                'snap_token' => $order->payment->snap_token,
-            ] : null,
-            'base_total' => $baseTotal,
-            'discount_amount' => $discountAmount,
-            'qr_payload' => $qrData['payload'],
-            'qr_code_data_uri' => $qrData['data_uri'],
-        ];
-    }
+		return $data;
+	}
 
-    private function buildQrData(string $orderNumber): array
-    {
-        $payload = Crypt::encryptString($orderNumber);
-        $svg = QrCode::format('svg')
-            ->size(220)
-            ->margin(1)
-            ->generate($payload);
+	private function buildQrData(Order $order): array
+	{
+		$order->loadMissing('orderDetails.menu:id,name');
 
-        return [
-            'payload' => $payload,
-            'data_uri' => 'data:image/svg+xml;base64,' . base64_encode($svg),
-        ];
-    }
+		$payloadData = [
+			'order_number' => (string) $order->order_number,
+			'total_items' => (int) $order->total_items,
+			'total_price' => (float) $order->total_price,
+			'items' => $order->orderDetails->map(function (OrderDetail $detail): array {
+				return [
+					'menu_id' => (int) $detail->menu_id,
+					'name' => Str::limit((string) ($detail->menu?->name ?? 'Menu'), 40, ''),
+					'qty' => (int) $detail->quantity,
+					'subtotal' => (float) $detail->subtotal,
+				];
+			})->values()->all(),
+		];
 
-    private function decodeQrPayload(string $payload): ?string
-    {
-        try {
-            return Crypt::decryptString($payload);
-        } catch (DecryptException) {
-            $normalized = trim($payload);
+		$payload = Crypt::encryptString(json_encode($payloadData, JSON_UNESCAPED_UNICODE));
+		$svg = QrCode::format('svg')
+			->size(220)
+			->margin(1)
+			->generate($payload);
 
-            if ($normalized !== '' && preg_match('/^[A-Za-z0-9\-]+$/', $normalized) === 1) {
-                return $normalized;
-            }
-
-            return null;
-        }
-    }
-
-    private function findValidPromo(string $code): ?Promo
-    {
-        return Promo::query()
-            ->whereRaw('UPPER(code) = ?', [Str::upper(trim($code))])
-            ->where('status_promo', 'active')
-            ->whereDate('valid_from', '<=', now()->toDateString())
-            ->whereDate('valid_until', '>=', now()->toDateString())
-            ->first();
-    }
-
-    private function calculatePromoDiscount(Promo $promo, float $baseTotal): float
-    {
-        $discount = $promo->type === 'percentage'
-            ? ($baseTotal * ((float) $promo->value / 100))
-            : (float) $promo->value;
-
-        return (float) min($baseTotal, $discount);
-    }
+		return [
+			'payload' => $payload,
+			'data_uri' => 'data:image/svg+xml;base64,' . base64_encode($svg),
+		];
+	}
 }

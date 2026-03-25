@@ -34,7 +34,7 @@ export default function CartItemCard({ item, onIncrement, onDecrement, onRemove 
                         {item.name}
                     </h3>
                     <p className="text-xs text-gray-400 mt-0.5">
-                        Rp {item.price.toLocaleString('id-ID')} / item
+                        Rp {(item.price * 1).toLocaleString('id-ID')} / item
                     </p>
                     <p className="text-sm font-bold text-orange-500 mt-1">
                         Rp {(item.price * item.quantity).toLocaleString('id-ID')}

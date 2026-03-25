@@ -51,12 +51,47 @@ class Menu extends Model
             ? $this->menuImages->first()
             : $this->menuImages()->select(['id', 'menu_id', 'image'])->first();
 
-        $imagePath = null;
-        if ($firstImageRecord && is_array($firstImageRecord->image) && isset($firstImageRecord->image[0])) {
-            $imagePath = $firstImageRecord->image[0];
+        $imageValue = $firstImageRecord?->image;
+
+        if (! $imageValue && $firstImageRecord) {
+            $rawImage = $firstImageRecord->getRawOriginal('image');
+            if (is_string($rawImage) && trim($rawImage) !== '') {
+                $imageValue = $rawImage;
+            }
         }
 
+        $imagePath = $this->extractFirstImagePath($imageValue);
+
         return $this->resolveImageUrl($imagePath);
+    }
+
+    private function extractFirstImagePath(mixed $imageValue): ?string
+    {
+        if (is_array($imageValue)) {
+            $first = $imageValue[0] ?? null;
+
+            return is_string($first) && trim($first) !== '' ? $first : null;
+        }
+
+        if (! is_string($imageValue)) {
+            return null;
+        }
+
+        $imageValue = trim($imageValue);
+        if ($imageValue === '') {
+            return null;
+        }
+
+        if (str_starts_with($imageValue, '[')) {
+            $decoded = json_decode($imageValue, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $first = $decoded[0] ?? null;
+
+                return is_string($first) && trim($first) !== '' ? $first : null;
+            }
+        }
+
+        return $imageValue;
     }
 
     private function resolveImageUrl(?string $path): string
@@ -69,7 +104,13 @@ class Menu extends Model
             return $path;
         }
 
-        return asset('storage/' . ltrim($path, '/'));
+        $normalizedPath = ltrim(str_replace('\\', '/', $path), '/');
+
+        if (str_starts_with($normalizedPath, 'storage/')) {
+            return asset($normalizedPath);
+        }
+
+        return asset('storage/' . $normalizedPath);
     }
 
 }

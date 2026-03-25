@@ -7,7 +7,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.tsx'],
+            input: ['resources/css/app.css', 'resources/js/app.tsx', 'resources/js/pos-admin.tsx'],
             ssr: 'resources/js/ssr.tsx',
             refresh: true,
         }),
@@ -23,15 +23,5 @@ export default defineConfig({
     ],
     esbuild: {
         jsx: 'automatic',
-    },
-    build: {
-        rollupOptions: {
-            output: {
-                manualChunks: {
-                    inertia: ['@inertiajs/react', '@inertiajs/core'],
-                    icons: ['lucide-react'],
-                },
-            },
-        },
     },
 });

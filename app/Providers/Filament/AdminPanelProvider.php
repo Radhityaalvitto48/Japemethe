@@ -28,6 +28,9 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->brandName('Japemethe Admin')
+            ->brandLogo(asset('favicon.svg'))
+            ->brandLogoHeight('1.75rem')
             ->colors([
                 'primary' => Color::Amber,
             ])

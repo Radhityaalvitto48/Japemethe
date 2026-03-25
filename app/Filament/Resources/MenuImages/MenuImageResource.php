@@ -7,14 +7,14 @@ use App\Filament\Resources\MenuImages\Pages\EditMenuImage;
 use App\Filament\Resources\MenuImages\Pages\ListMenuImages;
 use App\Filament\Resources\MenuImages\Schemas\MenuImageForm;
 use App\Filament\Resources\MenuImages\Tables\MenuImagesTable;
+use App\Filament\Resources\BaseAdminResource;
 use App\Models\MenuImage;
 use BackedEnum;
-use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-class MenuImageResource extends Resource
+class MenuImageResource extends BaseAdminResource
 {
     protected static ?string $model = MenuImage::class;
 

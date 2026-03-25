@@ -7,14 +7,14 @@ use App\Filament\Resources\Tables\Pages\EditTable;
 use App\Filament\Resources\Tables\Pages\ListTables;
 use App\Filament\Resources\Tables\Schemas\TableForm;
 use App\Filament\Resources\Tables\Tables\TablesTable;
+use App\Filament\Resources\BaseAdminResource;
 use App\Models\Table as Table1;
 use BackedEnum;
-use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-class TableResource extends Resource
+class TableResource extends BaseAdminResource
 {
     protected static ?string $model = Table1::class;
 
