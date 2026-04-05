@@ -20,9 +20,11 @@ class Menu extends Model
         'status_menu',
     ];
 
+    // Don't auto-append image_url to prevent N+1 queries in aggregates
+    // Access via $menu->image_url only when needed, not in bulk queries
     protected $appends = [
         'id_menu',
-        'image_url',
+        // 'image_url', // DISABLED: Causes OOM in widget queries due to N+1 problem
     ];
 
     public function menuImages()

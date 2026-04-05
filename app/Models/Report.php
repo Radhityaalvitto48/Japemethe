@@ -9,10 +9,10 @@ class Report extends Model
 {
     protected $fillable = [
         'generated_by',
-        'report_code',
         'report_type',
         'filter_criteria',
         'file_path',
+        'status_report',
         'created_at',
         'updated_at',
     ];

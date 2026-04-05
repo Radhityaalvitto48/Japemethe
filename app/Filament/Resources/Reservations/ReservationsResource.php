@@ -13,15 +13,17 @@ use BackedEnum;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class ReservationsResource extends BaseAdminResource
 {
     protected static ?string $model = Reservation::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDateRange;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendar;
 
-    protected static ?string $recordTitleAttribute = 'no';
+    protected static string|UnitEnum|null $navigationGroup = 'Operasional';
 
+    protected static ?int $navigationSort = 2;
 
     public static function getNavigationLabel(): string
     {

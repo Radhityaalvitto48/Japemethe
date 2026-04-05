@@ -10,26 +10,43 @@ use App\Filament\Resources\Orders\Tables\OrdersTable;
 use App\Filament\Resources\BaseAdminResource;
 use App\Models\Order;
 use BackedEnum;
+use Illuminate\Database\Eloquent\Builder;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class OrderResource extends BaseAdminResource
 {
     protected static ?string $model = Order::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+        protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShoppingCart;
 
-    protected static ?string $recordTitleAttribute = 'no';
+        protected static string|UnitEnum|null $navigationGroup = 'Transaksi';
 
-    public static function form(Schema $schema): Schema
-    {
-        return OrderForm::configure($schema);
-    }
+        protected static ?int $navigationSort = 1;
+
+        public static function getNavigationLabel(): string
+        {
+            return 'Pesanan';
+        }
+
+        protected static ?string $recordTitleAttribute = 'no';
+
+        public static function form(Schema $schema): Schema
+        {
+            return OrderForm::configure($schema);
+        }
 
     public static function table(Table $table): Table
     {
         return OrdersTable::configure($table);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['table', 'orderDetails.menu']);
     }
 
     public static function getRelations(): array

@@ -26,7 +26,7 @@ export default function CategoryList({ categories, activeCategory, onCategoryCli
         <section className="px-4 pb-4">
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
                 {/* All Category */}
-                <button onClick={() => onCategoryClick(null)} className="flex flex-shrink-0 flex-col items-center gap-2">
+                <button onClick={() => onCategoryClick(null)} className="flex shrink-0 flex-col items-center gap-2">
                     <div
                         className={cn(
                             'flex h-14 w-14 items-center justify-center rounded-full border-2 bg-white transition-all sm:h-16 sm:w-16',
@@ -50,7 +50,7 @@ export default function CategoryList({ categories, activeCategory, onCategoryCli
                     <button
                         key={category.id}
                         onClick={() => onCategoryClick(category.id)}
-                        className="flex flex-shrink-0 flex-col items-center gap-2"
+                        className="flex shrink-0 flex-col items-center gap-2"
                     >
                         <div
                             className={cn(
@@ -66,7 +66,7 @@ export default function CategoryList({ categories, activeCategory, onCategoryCli
                         </div>
                         <span
                             className={cn(
-                                'max-w-[70px] truncate text-xs font-medium sm:text-sm',
+                                'max-w-17.5 truncate text-xs font-medium sm:text-sm',
                                 activeCategory === category.id ? 'text-orange-600' : 'text-gray-600',
                             )}
                         >

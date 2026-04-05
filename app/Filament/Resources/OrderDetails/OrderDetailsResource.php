@@ -10,15 +10,26 @@ use App\Filament\Resources\OrderDetails\Tables\OrderDetailsTable;
 use App\Filament\Resources\BaseAdminResource;
 use App\Models\OrderDetail;
 use BackedEnum;
+use Illuminate\Database\Eloquent\Builder;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class OrderDetailsResource extends BaseAdminResource
 {
     protected static ?string $model = OrderDetail::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedListBullet;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Transaksi';
+
+    public static function getNavigationLabel(): string
+    {
+        return 'Detail Pesanan';
+    }
+
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $recordTitleAttribute = 'no';
 
@@ -30,6 +41,12 @@ class OrderDetailsResource extends BaseAdminResource
     public static function table(Table $table): Table
     {
         return OrderDetailsTable::configure($table);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['menu', 'order.table', 'order.orderDetails.menu']);
     }
 
     public static function getRelations(): array

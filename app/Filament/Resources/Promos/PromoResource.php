@@ -13,19 +13,29 @@ use BackedEnum;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class PromoResource extends BaseAdminResource
 {
     protected static ?string $model = Promo::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTag;
+        protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedGift;
 
-    protected static ?string $recordTitleAttribute = 'no';
+        protected static string|UnitEnum|null $navigationGroup = 'Marketing';
 
-    public static function form(Schema $schema): Schema
-    {
-        return PromoForm::configure($schema);
-    }
+        protected static ?int $navigationSort = 1;
+
+        public static function getNavigationLabel(): string
+        {
+            return 'Promo';
+        }
+
+        protected static ?string $recordTitleAttribute = 'no';
+
+        public static function form(Schema $schema): Schema
+        {
+            return PromoForm::configure($schema);
+        }
 
     public static function table(Table $table): Table
     {

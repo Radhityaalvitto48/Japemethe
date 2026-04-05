@@ -35,6 +35,11 @@ class Order extends Model
         return $this->belongsTo(Promo::class, 'promo_id');
     }
 
+    public function promo()
+    {
+        return $this->belongsTo(Promo::class, 'promo_id');
+    }
+
     public function payment()
     {
         return $this->hasOne(Payment::class, 'order_id');

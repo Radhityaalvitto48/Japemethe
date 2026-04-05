@@ -13,19 +13,29 @@ use BackedEnum;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class MenuResource extends BaseAdminResource
 {
     protected static ?string $model = Menu::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+        protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSparkles;
 
-    protected static ?string $recordTitleAttribute = 'Menu';
+        protected static string|UnitEnum|null $navigationGroup = 'Menu';
 
-    public static function form(Schema $schema): Schema
-    {
-        return MenuForm::configure($schema);
-    }
+        protected static ?int $navigationSort = 2;
+
+        public static function getNavigationLabel(): string
+        {
+            return 'Menu';
+        }
+
+        protected static ?string $recordTitleAttribute = 'Menu';
+
+        public static function form(Schema $schema): Schema
+        {
+            return MenuForm::configure($schema);
+        }
 
     public static function table(Table $table): Table
     {

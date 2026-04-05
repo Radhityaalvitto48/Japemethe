@@ -130,6 +130,9 @@ class OrderController extends Controller
 		DB::beginTransaction();
 
 		try {
+			$midtransUnavailable = false;
+			$snapToken = null;
+
 			$order = Order::query()->create([
 				'table_id' => (int) $validated['table_id'],
 				'total_items' => $totalItems,
@@ -183,22 +186,27 @@ class OrderController extends Controller
 
 			$midtransOrderId = 'ORDER-' . $order->id . '-' . time();
 
-			$snapToken = Snap::getSnapToken([
-				'transaction_details' => [
-					'order_id' => $midtransOrderId,
-					'gross_amount' => $grossAmount,
-				],
-				'item_details' => $itemDetails,
-				'customer_details' => [
-					'email' => $order->customer_email ?? 'guest@japemethe.com',
-					'phone' => $order->customer_phone ?? '',
-				],
-			]);
+			try {
+				$snapToken = Snap::getSnapToken([
+					'transaction_details' => [
+						'order_id' => $midtransOrderId,
+						'gross_amount' => $grossAmount,
+					],
+					'item_details' => $itemDetails,
+					'customer_details' => [
+						'email' => $order->customer_email ?? 'guest@japemethe.com',
+						'phone' => $order->customer_phone ?? '',
+					],
+				]);
+			} catch (Throwable $midtransException) {
+				$midtransUnavailable = true;
+				report($midtransException);
+			}
 
 			Payment::query()->create([
 				'order_id' => $order->id,
-				'payment_method' => 'midtrans_snap',
-				'status_payment' => 'pending',
+				'payment_method' => $midtransUnavailable ? 'midtrans_unavailable' : 'midtrans_snap',
+				'status_payment' => $midtransUnavailable ? 'failed' : 'pending',
 				'grass_amount' => $grossAmount,
 				'snap_token' => $snapToken,
 				'payment_date' => null,
@@ -214,9 +222,12 @@ class OrderController extends Controller
 
 			return response()->json([
 				'success' => true,
-				'message' => 'Order berhasil dibuat.',
+				'message' => $midtransUnavailable
+					? 'Order berhasil dibuat, tetapi token pembayaran sedang tidak tersedia.'
+					: 'Order berhasil dibuat.',
 				'data' => $this->withQrData($order),
 				'snap_token' => $snapToken,
+				'midtrans_unavailable' => $midtransUnavailable,
 			], 201);
 		} catch (Throwable $exception) {
 			DB::rollBack();

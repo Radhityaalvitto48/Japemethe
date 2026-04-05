@@ -2,8 +2,6 @@
 
 namespace App\Filament\Resources\Reports;
 
-use App\Filament\Resources\Reports\Pages\CreateReports;
-use App\Filament\Resources\Reports\Pages\EditReports;
 use App\Filament\Resources\Reports\Pages\ListReports;
 use App\Filament\Resources\Reports\Schemas\ReportsForm;
 use App\Filament\Resources\Reports\Tables\ReportsTable;
@@ -13,12 +11,22 @@ use BackedEnum;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class ReportsResource extends BaseAdminResource
 {
     protected static ?string $model = Report::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocument;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Laporan';
+
+    protected static ?int $navigationSort = 1;
+
+    public static function getNavigationLabel(): string
+    {
+        return 'Laporan';
+    }
 
     protected static ?string $recordTitleAttribute = 'no';
 
@@ -43,8 +51,6 @@ class ReportsResource extends BaseAdminResource
     {
         return [
             'index' => ListReports::route('/'),
-            'create' => CreateReports::route('/create'),
-            'edit' => EditReports::route('/{record}/edit'),
         ];
     }
 }

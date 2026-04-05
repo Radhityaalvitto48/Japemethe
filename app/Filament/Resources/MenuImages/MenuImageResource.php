@@ -13,12 +13,22 @@ use BackedEnum;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class MenuImageResource extends BaseAdminResource
 {
     protected static ?string $model = MenuImage::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPhoto;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Menu';
+
+    public static function getNavigationLabel(): string
+    {
+        return 'Gambar Menu';
+    }
+
+    protected static ?int $navigationSort = 3;
 
     protected static ?string $recordTitleAttribute = 'no';
 

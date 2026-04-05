@@ -37,6 +37,7 @@ function orderTestMenu(): Menu
 
 describe('Order API', function () {
     test('can create order with items', function () {
+        /** @var \Tests\TestCase $this */
         $table = orderTestTable();
         $menu = orderTestMenu();
 
@@ -64,6 +65,7 @@ describe('Order API', function () {
     });
 
     test('cannot create order without items', function () {
+        /** @var \Tests\TestCase $this */
         $table = orderTestTable();
 
         $response = $this->postJson('/api/orders', [
@@ -78,6 +80,7 @@ describe('Order API', function () {
     });
 
     test('cannot create order with invalid table', function () {
+        /** @var \Tests\TestCase $this */
         $menu = orderTestMenu();
 
         $response = $this->postJson('/api/orders', [
@@ -94,6 +97,7 @@ describe('Order API', function () {
     });
 
     test('can get order by order number', function () {
+        /** @var \Tests\TestCase $this */
         $table = orderTestTable();
 
         $order = Order::create([
@@ -112,6 +116,7 @@ describe('Order API', function () {
     });
 
     test('can update order status', function () {
+        /** @var \Tests\TestCase $this */
         $table = orderTestTable();
 
         $order = Order::create([
@@ -136,6 +141,7 @@ describe('Order API', function () {
 
 describe('Order with Promo', function () {
     test('can apply valid promo code', function () {
+        /** @var \Tests\TestCase $this */
         $table = orderTestTable();
         $menu = orderTestMenu();
 
@@ -170,6 +176,7 @@ describe('Order with Promo', function () {
     });
 
     test('cannot apply invalid promo code', function () {
+        /** @var \Tests\TestCase $this */
         $table = orderTestTable();
         $menu = orderTestMenu();
 
