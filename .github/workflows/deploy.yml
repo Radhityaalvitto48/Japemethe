@@ -2,46 +2,49 @@ name: Deploy Website Japemethe
 on:
   push:
     branches:
-      - main
+      - Main
 
 jobs:
   web-deploy:
     name: Build and Deploy
     runs-on: ubuntu-latest
     steps:
-    - name: 🚚 Get latest code
-      uses: actions/checkout@v3
+      - name: 🚚 Checkout Code
+        uses: actions/checkout@v4
 
-    - name: 🛠️ Setup PHP
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.2'
+      - name: 🐘 Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, bcmath, gd, zip
 
-    - name: 📥 Install Dependencies (Laravel)
-      run: composer install --no-dev --optimize-autoloader
+      - name: 📦 Install Composer Dependencies
+        run: composer install --no-dev --optimize-autoloader
 
-    - name: 📦 Build Frontend (React)
-      run: |
-        npm install
-        npm run build
+      - name: 🟢 Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
-    - name: 🚀 Sync Files via FTP
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./
-        server-dir: ./japemethe-app/
-        exclude: |
-          **/.git*
-          **/.github**
-          **/node_modules/**
-          **/vendor/**
-          **/tests/**
-          **/storage/logs/*
-          .env
-          .env.example
-          phpunit.xml
-          package-lock.json
-          composer.lock
+      - name: 🏗️ Build React & Tailwind (Vite)
+        run: |
+          npm install
+          npm run build
+
+      - name: 🚀 Sync Files via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./
+          server-dir: ./japemethe-app/
+          exclude: |
+            **/.git*
+            **/.github**
+            **/node_modules/**
+            **/vendor/**
+            **/tests/**
+            **/storage/logs/*
+            .env
+            .env.example
