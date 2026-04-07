@@ -15,6 +15,7 @@ const Carousel = forwardRef<HTMLDivElement, CarouselProps>(
         const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
         const [selectedIndex, setSelectedIndex] = useState(0);
         const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+        const canNavigate = scrollSnaps.length > 1;
 
         const scrollPrev = useCallback(() => {
             if (emblaApi) emblaApi.scrollPrev();
@@ -48,12 +49,12 @@ const Carousel = forwardRef<HTMLDivElement, CarouselProps>(
 
         // Autoplay
         useEffect(() => {
-            if (!autoplay || !emblaApi) return;
+            if (!autoplay || !emblaApi || !canNavigate) return;
             const interval = setInterval(() => {
                 emblaApi.scrollNext();
             }, autoplayInterval);
             return () => clearInterval(interval);
-        }, [autoplay, autoplayInterval, emblaApi]);
+        }, [autoplay, autoplayInterval, emblaApi, canNavigate]);
 
         return (
             <div ref={ref} className={cn('relative', className)} {...props}>
@@ -62,7 +63,7 @@ const Carousel = forwardRef<HTMLDivElement, CarouselProps>(
                 </div>
 
                 {/* Navigation Arrows */}
-                {showArrows && (
+                {showArrows && canNavigate && (
                     <>
                         <button
                             onClick={scrollPrev}
@@ -82,7 +83,7 @@ const Carousel = forwardRef<HTMLDivElement, CarouselProps>(
                 )}
 
                 {/* Dots Indicator */}
-                {showDots && scrollSnaps.length > 1 && (
+                {showDots && canNavigate && (
                     <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 gap-2">
                         {scrollSnaps.map((_, index) => (
                             <button

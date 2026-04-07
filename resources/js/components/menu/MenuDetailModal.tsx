@@ -104,6 +104,7 @@ export default function MenuDetailModal({ menu, isOpen, onClose, onAddToCart, in
     if (!isOpen || !displayMenu) return null;
 
     const images = getAllMenuImages(displayMenu);
+    const canSlide = images.length > 1;
     const isOutOfStock = displayMenu.stock === 0;
     const maxQty = Math.min(displayMenu.stock, 99);
 
@@ -140,12 +141,12 @@ export default function MenuDetailModal({ menu, isOpen, onClose, onAddToCart, in
 
                 {/* Image Carousel */}
                 <div className="relative w-full">
-                    {images.length > 1 ? (
+                    {canSlide ? (
                         <Carousel
                             autoplay
                             autoplayInterval={4000}
-                            showArrows={images.length > 1}
-                            showDots={images.length > 1}
+                            showArrows={canSlide}
+                            showDots={canSlide}
                             className="w-full"
                         >
                             {images.map((img, idx) => (

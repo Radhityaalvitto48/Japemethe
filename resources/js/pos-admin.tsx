@@ -119,9 +119,6 @@ function PosAdminApp({ endpointBase }: { endpointBase: string }): React.JSX.Elem
     const [paymentFilter, setPaymentFilter] = useState<'all' | 'unpaid' | 'paid'>('all');
     const [menuSearch, setMenuSearch] = useState('');
     const [menuCategoryFilter, setMenuCategoryFilter] = useState('all');
-    const [quickAddMenuId, setQuickAddMenuId] = useState<number | ''>('');
-    const [quickAddQty, setQuickAddQty] = useState(1);
-    const [quickAddNote, setQuickAddNote] = useState('');
     const [promoCode, setPromoCode] = useState('');
     const [cashReceived, setCashReceived] = useState('');
     const [paymentMode, setPaymentMode] = useState<'cash' | 'qris'>('cash');
@@ -344,7 +341,6 @@ function PosAdminApp({ endpointBase }: { endpointBase: string }): React.JSX.Elem
                 setSelectedOrder(response.data);
             }
 
-            setQuickAddNote('');
             showFlash('success', 'Menu berhasil ditambahkan ke order.');
             void refreshOrdersAndReservations();
         } catch (error) {
@@ -906,21 +902,6 @@ function PosAdminApp({ endpointBase }: { endpointBase: string }): React.JSX.Elem
                             cashReceivedValue={cashReceivedValue}
                             changeAmount={changeAmount}
                             onPayAction={handlePayAction}
-                            quickAddMenuId={quickAddMenuId}
-                            onQuickAddMenuChange={setQuickAddMenuId}
-                            quickAddQty={quickAddQty}
-                            onQuickAddQtyChange={setQuickAddQty}
-                            quickAddNote={quickAddNote}
-                            onQuickAddNoteChange={setQuickAddNote}
-                            menus={menus}
-                            onQuickAddToOrder={() => {
-                                if (!quickAddMenuId) {
-                                    showFlash('error', 'Pilih menu dulu.');
-                                    return;
-                                }
-
-                                void addMenuToOrder(quickAddMenuId, quickAddQty, quickAddNote);
-                            }}
                             onUpdateOrderItemQuantity={(detailId, quantity) => {
                                 void updateOrderItemQuantity(detailId, quantity);
                             }}

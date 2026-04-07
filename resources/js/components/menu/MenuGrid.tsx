@@ -38,6 +38,22 @@ export interface Menu {
     menu_images?: MenuImage[];
 }
 
+const normalizeImageKey = (url: string): string => {
+    if (!url) return '';
+
+    const trimmed = url.trim();
+    if (!trimmed) return '';
+
+    try {
+        // Collapse absolute/relative variants of the same path into one key.
+        const parsed = new URL(trimmed, window.location.origin);
+        const normalizedPath = parsed.pathname.replace(/\\/g, '/').replace(/\/+/g, '/');
+        return decodeURIComponent(normalizedPath).toLowerCase();
+    } catch {
+        return trimmed.replace(/\\/g, '/').replace(/\/+/g, '/').toLowerCase();
+    }
+};
+
 interface MenuGridProps {
     menus: Menu[];
     cart: CartItem[];
@@ -72,20 +88,32 @@ export const getMenuImage = (menu: Menu): string => {
 // Get all images from menu
 export const getAllMenuImages = (menu: Menu): string[] => {
     const images: string[] = [];
+    const seen = new Set<string>();
+
+    const addImage = (path: string) => {
+        const resolved = getImageUrl(path);
+        const key = normalizeImageKey(resolved);
+        if (!key || seen.has(key)) {
+            return;
+        }
+
+        seen.add(key);
+        images.push(resolved);
+    };
 
     if (menu.image_url) {
-        images.push(getImageUrl(menu.image_url));
+        addImage(menu.image_url);
     }
 
     if (menu.menu_images && menu.menu_images.length > 0) {
         menu.menu_images.forEach((mi) => {
             if (Array.isArray(mi.image)) {
-                mi.image.forEach((img) => images.push(getImageUrl(img)));
+                mi.image.forEach((img) => addImage(img));
             }
         });
     }
 
-    return images.length > 0 ? Array.from(new Set(images)) : ['/images/placeholder.jpg'];
+    return images.length > 0 ? images : ['/images/placeholder.jpg'];
 };
 
 export default function MenuGrid({ menus, cart, onMenuClick, onAddToCart, onIncrement, onDecrement }: MenuGridProps) {

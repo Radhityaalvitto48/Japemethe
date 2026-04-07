@@ -20,11 +20,6 @@ type PosOrder = {
     items: PosOrderItem[];
 };
 
-type PosMenu = {
-    id: number;
-    name: string;
-};
-
 type OrderDetailPanelProps = {
     selectedOrder: PosOrder | null;
     selectedPaymentStatus: string;
@@ -43,14 +38,6 @@ type OrderDetailPanelProps = {
     cashReceivedValue: number;
     changeAmount: number;
     onPayAction: () => void;
-    quickAddMenuId: number | '';
-    onQuickAddMenuChange: (value: number | '') => void;
-    quickAddQty: number;
-    onQuickAddQtyChange: (value: number) => void;
-    quickAddNote: string;
-    onQuickAddNoteChange: (value: string) => void;
-    menus: PosMenu[];
-    onQuickAddToOrder: () => void;
     onUpdateOrderItemQuantity: (detailId: number, quantity: number) => void;
     formatRupiah: (value: number) => string;
 };
@@ -73,14 +60,6 @@ export default function OrderDetailPanel({
     cashReceivedValue,
     changeAmount,
     onPayAction,
-    quickAddMenuId,
-    onQuickAddMenuChange,
-    quickAddQty,
-    onQuickAddQtyChange,
-    quickAddNote,
-    onQuickAddNoteChange,
-    menus,
-    onQuickAddToOrder,
     onUpdateOrderItemQuantity,
     formatRupiah,
 }: OrderDetailPanelProps): React.JSX.Element {
@@ -144,45 +123,6 @@ export default function OrderDetailPanel({
                                 </div>
                             ))}
                         </div>
-                    </div>
-
-                    <div className="rounded-xl border border-gray-200 p-3">
-                        <p className="text-sm font-semibold text-gray-800">Tambah/Ganti Menu</p>
-                        <div className="mt-2 grid grid-cols-[1fr_70px] gap-2">
-                            <select
-                                value={quickAddMenuId}
-                                onChange={(event) => onQuickAddMenuChange(event.target.value ? Number(event.target.value) : '')}
-                                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                            >
-                                <option value="">Pilih menu</option>
-                                {menus.map((menu) => (
-                                    <option key={menu.id} value={menu.id}>
-                                        {menu.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <input
-                                type="number"
-                                min={1}
-                                value={quickAddQty}
-                                onChange={(event) => onQuickAddQtyChange(Math.max(1, Number(event.target.value) || 1))}
-                                className="rounded-lg border border-gray-300 px-2 py-2 text-sm"
-                            />
-                        </div>
-                        <textarea
-                            value={quickAddNote}
-                            onChange={(event) => onQuickAddNoteChange(event.target.value)}
-                            placeholder="Catatan item (opsional), contoh: pedas sedang"
-                            rows={2}
-                            className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                        />
-                        <button
-                            type="button"
-                            onClick={onQuickAddToOrder}
-                            className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700"
-                        >
-                            Tambahkan ke Order
-                        </button>
                     </div>
 
                     <div className="rounded-xl border border-gray-200 p-3">
