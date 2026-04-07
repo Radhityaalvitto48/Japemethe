@@ -7,7 +7,9 @@ use App\Http\Controllers\PosController;
 
 use Inertia\Inertia;
 
-Route::get('/', [MenuController::class, 'indexPage'])->name('home');
+Route::get('/', function () {
+    return Inertia::render('Reservation');
+})->name('home');
 Route::get('/scan/{tableNumber}', [MenuController::class, 'scanTable'])->name('menu.scan');
 Route::get('/cart', function () {
     return Inertia::render('Cart');

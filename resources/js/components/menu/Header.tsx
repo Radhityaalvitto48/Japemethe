@@ -31,7 +31,12 @@ export default function Header({ onBackClick, cartCount = 0, searchValue, onSear
     return (
         <header className="sticky top-0 z-50 bg-white shadow-sm">
             <div className="flex items-center justify-between px-4 py-3 lg:mx-auto lg:max-w-7xl lg:px-8">
-                <h1 className="shrink-0 text-lg font-bold tracking-wide text-gray-800 lg:text-xl">JAPEMETHE</h1>
+                {/* <h1 className="shrink-0 text-lg font-bold tracking-wide text-gray-800 lg:text-xl">JAPEMETHE</h1> */}
+                <img
+                    src="/storage/logo.webp"
+                    alt="JAPEMETHE"
+                    className="h-10 w-20 object-contain"
+                />
 
                 {/* Desktop Search Bar */}
                 {onSearchSubmit && (

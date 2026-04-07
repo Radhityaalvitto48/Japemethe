@@ -34,7 +34,7 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->brandName('Japemethe')
             ->brandLogo(asset('storage/logo.webp'))
-            ->brandLogoHeight('3rem')
+            ->brandLogoHeight('10rem')
             ->colors([
                 'primary' => Color::Amber,
             ])
