@@ -23,7 +23,7 @@ describe('Promo Validation API', function () {
         $response->assertStatus(200)
             ->assertJson([
                 'success' => true,
-                'message' => 'Kode promo valid',
+                'message' => 'Kode promo valid.',
             ]);
 
         // Check discount calculation (10% of 100000 = 10000)
@@ -56,12 +56,13 @@ describe('Promo Validation API', function () {
     test('returns error for invalid promo code', function () {
         $response = $this->postJson('/api/promos/validate', [
             'code' => 'INVALIDCODE',
+            'total_price' => 100000,
         ]);
 
-        $response->assertStatus(404)
+        $response->assertStatus(422)
             ->assertJson([
                 'success' => false,
-                'message' => 'Kode promo tidak valid atau sudah kadaluarsa',
+                'message' => 'Kode promo tidak valid atau sudah kadaluarsa.',
             ]);
     });
 
@@ -79,9 +80,10 @@ describe('Promo Validation API', function () {
 
         $response = $this->postJson('/api/promos/validate', [
             'code' => 'EXPIRED',
+            'total_price' => 100000,
         ]);
 
-        $response->assertStatus(404);
+        $response->assertStatus(422);
     });
 
     test('returns error for inactive promo', function () {
@@ -98,9 +100,10 @@ describe('Promo Validation API', function () {
 
         $response = $this->postJson('/api/promos/validate', [
             'code' => 'INACTIVE',
+            'total_price' => 100000,
         ]);
 
-        $response->assertStatus(404);
+        $response->assertStatus(422);
     });
 
     test('returns error when total price below minimum', function () {

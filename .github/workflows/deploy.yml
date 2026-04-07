@@ -1,0 +1,47 @@
+name: Deploy Website Japemethe
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  web-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    steps:
+    - name: 🚚 Get latest code
+      uses: actions/checkout@v3
+
+    - name: 🛠️ Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+
+    - name: 📥 Install Dependencies (Laravel)
+      run: composer install --no-dev --optimize-autoloader
+
+    - name: 📦 Build Frontend (React)
+      run: |
+        npm install
+        npm run build
+
+    - name: 🚀 Sync Files via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./
+        server-dir: ./japemethe-app/
+        exclude: |
+          **/.git*
+          **/.github**
+          **/node_modules/**
+          **/vendor/**
+          **/tests/**
+          **/storage/logs/*
+          .env
+          .env.example
+          phpunit.xml
+          package-lock.json
+          composer.lock

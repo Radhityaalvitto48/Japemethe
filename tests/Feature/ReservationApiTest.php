@@ -29,7 +29,7 @@ describe('Reservation API', function () {
         $response->assertStatus(201)
             ->assertJson([
                 'success' => true,
-                'message' => 'Reservasi berhasil dibuat',
+                'message' => 'Reservasi berhasil dibuat.',
             ]);
 
         expect(Reservation::count())->toBe(1);
@@ -104,7 +104,7 @@ describe('Reservation API', function () {
         $response->assertStatus(200)
             ->assertJson([
                 'success' => true,
-                'message' => 'Reservasi berhasil dibatalkan',
+                'message' => 'Reservasi berhasil dibatalkan.',
             ]);
 
         expect($reservation->fresh()->status)->toBe('cancelled');
