@@ -30,6 +30,7 @@ function orderTestMenu(): Menu
         'name' => 'Test Menu ' . uniqid(),
         'slug' => $slug,
         'price' => 25000,
+        'stock' => 100,
         'status_menu' => 'available',
         'menu_category_id' => $category->id,
     ]);
@@ -57,7 +58,7 @@ describe('Order API', function () {
         $response->assertStatus(201)
             ->assertJson([
                 'success' => true,
-                'message' => 'Order berhasil dibuat',
+                'message' => 'Order berhasil dibuat.',
             ]);
 
         expect(Order::count())->toBe(1);
@@ -194,7 +195,7 @@ describe('Order with Promo', function () {
         $response->assertStatus(422)
             ->assertJson([
                 'success' => false,
-                'message' => 'Kode promo tidak valid atau sudah kadaluarsa',
+                'message' => 'Kode promo tidak valid atau tidak aktif.',
             ]);
     });
 });

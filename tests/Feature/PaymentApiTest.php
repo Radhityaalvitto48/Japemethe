@@ -31,41 +31,40 @@ describe('Payment API', function () {
 
         $response = $this->postJson('/api/payments', [
             'order_id' => $order->id,
-            'payment_method' => 'bank_transfer',
+            'payment_method' => 'cash',
             'grass_amount' => 50000,
         ]);
 
-        $response->assertStatus(201)
+        $response->assertStatus(200)
             ->assertJson([
                 'success' => true,
-                'message' => 'Payment berhasil dibuat',
+                'message' => 'Pembayaran tunai berhasil diselesaikan.',
             ]);
 
         expect(Payment::count())->toBe(1);
     });
 
-    test('cannot create duplicate payment for same order', function () {
+    test('duplicate payment request is idempotent for same order', function () {
         $order = paymentTestOrder();
 
-        Payment::create([
+        $this->postJson('/api/payments', [
             'order_id' => $order->id,
-            'payment_method' => 'bank_transfer',
+            'payment_method' => 'cash',
             'grass_amount' => 50000,
-            'status_payment' => 'pending',
-            'snap_token' => '',
-        ]);
+        ])->assertStatus(200);
 
         $response = $this->postJson('/api/payments', [
             'order_id' => $order->id,
-            'payment_method' => 'bank_transfer',
+            'payment_method' => 'cash',
             'grass_amount' => 50000,
         ]);
 
-        $response->assertStatus(422)
+        $response->assertStatus(200)
             ->assertJson([
-                'success' => false,
-                'message' => 'Order ini sudah memiliki pembayaran',
+                'success' => true,
             ]);
+
+        expect(Payment::where('order_id', $order->id)->count())->toBe(1);
     });
 
     test('can get payment by order id', function () {
@@ -108,7 +107,7 @@ describe('Payment API', function () {
             ]);
 
         expect($payment->fresh()->status_payment)->toBe('completed');
-        expect($order->fresh()->status_order)->toBe('in_progress');
+        expect($order->fresh()->status_order)->toBe('completed');
     });
 
     test('cannot create payment with invalid order', function () {

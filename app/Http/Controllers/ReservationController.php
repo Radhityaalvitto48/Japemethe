@@ -35,6 +35,20 @@ class ReservationController extends \App\Http\Controllers\Controller
             ], 422);
         }
 
+        $conflictExists = Reservation::query()
+            ->where('id_table', (int) $validated['id_table'])
+            ->where('reservation_date', $validated['reservation_date'])
+            ->where('reservation_time', $validated['reservation_time'])
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->exists();
+
+        if ($conflictExists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Meja sudah direservasi pada waktu tersebut',
+            ], 422);
+        }
+
         $reservation = Reservation::query()->create([
             'customer_name' => $validated['customer_name'],
             'customer_phone' => $validated['customer_phone'],
