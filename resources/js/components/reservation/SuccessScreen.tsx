@@ -73,13 +73,7 @@ export default function SuccessScreen({ reservation, onNewReservation }: Success
                 {/* Actions */}
                 <div className="mt-8 space-y-3">
                     <button
-                        onClick={onNewReservation}
-                        className="w-full rounded-full bg-orange-500 py-3.5 text-sm font-bold text-white shadow-md shadow-orange-500/25 transition-all hover:bg-orange-600 hover:shadow-lg active:scale-[0.98]"
-                    >
-                        Buat Reservasi Lagi
-                    </button>
-                    <button
-                        onClick={() => router.get('/menu')}
+                        onClick={() => router.get('/')}
                         className="w-full rounded-full border-2 border-dashed border-orange-200 py-3 text-sm font-medium text-orange-500 transition-all hover:border-orange-400 hover:bg-orange-50/50 active:scale-[0.98]"
                     >
                         Kembali ke Menu
