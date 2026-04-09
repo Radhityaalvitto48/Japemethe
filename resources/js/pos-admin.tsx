@@ -107,8 +107,15 @@ function formatIdrInput(value: number): string {
     }).format(value);
 }
 
-function PosAdminApp({ endpointBase }: { endpointBase: string }): React.JSX.Element {
-    const panelUrl = '/admin';
+function PosAdminApp({
+    endpointBase,
+    panelUrl,
+    loginUrl,
+}: {
+    endpointBase: string;
+    panelUrl: string;
+    loginUrl: string;
+}): React.JSX.Element {
 
     const [menus, setMenus] = useState<PosMenu[]>([]);
     const [orders, setOrders] = useState<PosOrder[]>([]);
@@ -157,7 +164,7 @@ function PosAdminApp({ endpointBase }: { endpointBase: string }): React.JSX.Elem
         });
 
         if (response.status === 401 || response.status === 419) {
-            window.location.assign('/admin/login');
+            window.location.assign(loginUrl);
             throw new Error('Sesi login berakhir. Silakan login ulang.');
         }
 
@@ -917,10 +924,13 @@ function PosAdminApp({ endpointBase }: { endpointBase: string }): React.JSX.Elem
 const mountElement = document.getElementById('kasir-pos-react');
 
 if (mountElement) {
-    const endpointBase = mountElement.getAttribute('data-endpoint-base') ?? '/admin/pos-api';
+    const endpointBase = mountElement.getAttribute('data-endpoint-base') ?? '/secure-panel-9x7k2/pos-api';
+    const panelUrl = mountElement.getAttribute('data-panel-url') ?? '/secure-panel-9x7k2';
+    const loginUrl = mountElement.getAttribute('data-login-url') ?? '/secure-panel-9x7k2/login';
+
     createRoot(mountElement).render(
         <React.StrictMode>
-            <PosAdminApp endpointBase={endpointBase} />
+            <PosAdminApp endpointBase={endpointBase} panelUrl={panelUrl} loginUrl={loginUrl} />
         </React.StrictMode>,
     );
 }

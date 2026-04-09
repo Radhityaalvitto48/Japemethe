@@ -11,6 +11,7 @@ import {
 } from '@/components/menu';
 import { getMenuImage, type Menu } from '@/components/menu/MenuGrid';
 import { TableProvider, useTable, CartProvider, useCart } from '@/contexts';
+import { getMenuPath, setMenuPath } from '@/utils/menuNavigation';
 
 const MenuDetailModal = lazy(() => import('@/components/menu/MenuDetailModal'));
 const CartModal = lazy(() => import('@/components/menu/CartModal'));
@@ -78,12 +79,14 @@ function MenuPageContent({ menus, categories, banners, selectedCategory, searchQ
         if (currentTable) {
             setCurrentTable(currentTable);
         }
+
+        setMenuPath();
     }, [currentTable, setCurrentTable]);
 
     // Handle search
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        router.get('/', { search: search, category_id: activeCategory }, {
+        router.get(getMenuPath(), { search: search, category_id: activeCategory }, {
             preserveState: true,
             preserveScroll: true,
             only: ['menus', 'selectedCategory', 'searchQuery'],
@@ -93,7 +96,7 @@ function MenuPageContent({ menus, categories, banners, selectedCategory, searchQ
     // Handle category filter
     const handleCategoryClick = (categoryId: number | null) => {
         setActiveCategory(categoryId);
-        router.get('/', { search: search, category_id: categoryId }, {
+        router.get(getMenuPath(), { search: search, category_id: categoryId }, {
             preserveState: true,
             preserveScroll: true,
             only: ['menus', 'selectedCategory', 'searchQuery'],
@@ -182,13 +185,18 @@ function MenuPageContent({ menus, categories, banners, selectedCategory, searchQ
 
     // Handle back button
     const handleBack = () => {
-        router.get('/');
+        router.get(getMenuPath());
     };
 
     // Handle tab navigation
     const handleTabClick = (tab: string) => {
         if (tab === 'orders') {
             router.get('/orders');
+            return;
+        }
+
+        if (tab === 'home') {
+            router.get(getMenuPath());
         }
     };
 

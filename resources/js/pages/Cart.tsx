@@ -10,6 +10,7 @@ import {
     CustomerDetailsForm,
     CartSummary,
 } from '@/components/cart';
+import { getMenuPath } from '@/utils/menuNavigation';
 
 export default function CartPage() {
     return (
@@ -162,7 +163,7 @@ function CartPageContent() {
                             </div>
 
                             <button
-                                onClick={() => router.get('/')}
+                                onClick={() => router.get(getMenuPath())}
                                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-orange-200 py-3 text-sm font-medium text-orange-500 hover:border-orange-400 hover:bg-orange-50/50 transition-all"
                             >
                                 <Plus className="h-4 w-4" />

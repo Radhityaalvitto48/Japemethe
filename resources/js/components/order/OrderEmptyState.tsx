@@ -1,5 +1,6 @@
 import { AlertCircle } from 'lucide-react';
 import { router } from '@inertiajs/react';
+import { getMenuPath } from '@/utils/menuNavigation';
 
 export default function OrderEmptyState() {
     return (
@@ -10,7 +11,7 @@ export default function OrderEmptyState() {
                 Pesanan yang kamu buat akan muncul di sini.
             </p>
             <button
-                onClick={() => router.get('/')}
+                onClick={() => router.get(getMenuPath())}
                 className="rounded-full bg-orange-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-orange-500/25 hover:bg-orange-600 transition-all active:scale-[0.98]"
             >
                 Lihat Menu

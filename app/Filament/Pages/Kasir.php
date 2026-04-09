@@ -26,7 +26,9 @@ class Kasir extends Page
 
     public function mount(): void
     {
-        $this->redirect(url('/admin/kasir-app'), navigate: true);
+        $adminPath = trim((string) env('ADMIN_PATH', 'secure-panel-9x7k2'), '/');
+
+        $this->redirect(url('/' . $adminPath . '/kasir-app'), navigate: true);
     }
 
     public static function canAccess(): bool

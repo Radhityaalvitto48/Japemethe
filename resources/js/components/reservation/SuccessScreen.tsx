@@ -79,7 +79,7 @@ export default function SuccessScreen({ reservation, onNewReservation }: Success
                         Buat Reservasi Lagi
                     </button>
                     <button
-                        onClick={() => router.get('/')}
+                        onClick={() => router.get('/menu')}
                         className="w-full rounded-full border-2 border-dashed border-orange-200 py-3 text-sm font-medium text-orange-500 transition-all hover:border-orange-400 hover:bg-orange-50/50 active:scale-[0.98]"
                     >
                         Kembali ke Menu

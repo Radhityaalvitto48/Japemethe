@@ -27,13 +27,16 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
+        $adminPath = trim((string) env('ADMIN_PATH', 'secure-panel-9x7k2'), '/');
+
         return $panel
             ->default()
             ->id('admin')
-            ->path('admin')
+            ->path($adminPath)
             ->login()
             ->brandName('Japemethe')
             ->brandLogo(asset('storage/logo.webp'))
+            ->favicon(asset('storage/logo.webp'))
             ->brandLogoHeight('3rem')
             ->colors([
                 'primary' => Color::Amber,
@@ -55,7 +58,7 @@ class AdminPanelProvider extends PanelProvider
                     ->group('Operasional')
                     ->icon('heroicon-o-computer-desktop')
                     ->sort(1)
-                    ->url(fn (): string => url('/admin/kasir-app'))
+                    ->url(fn (): string => url('/' . $adminPath . '/kasir-app'))
                     ->visible(fn (): bool => in_array(Auth::user()?->role, ['admin', 'kasir'], true)),
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
