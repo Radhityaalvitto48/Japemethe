@@ -8,8 +8,6 @@ use App\Models\Table;
 
 use Inertia\Inertia;
 
-$adminPath = trim((string) env('ADMIN_PATH', 'secure-panel-9x7k2'), '/');
-
 Route::get('/', function () {
     return Inertia::render('Reservation');
 })->name('home');
@@ -43,12 +41,12 @@ Route::get('/reservation', function () {
     return Inertia::render('Reservation');
 })->name('reservation');
 
-Route::middleware('auth')->get('/' . $adminPath . '/kasir-app', function () {
+Route::middleware('auth')->get('/admin/kasir-app', function () {
     abort_unless(in_array(Auth::user()?->role, ['admin', 'kasir'], true), 403);
     return view('admin.kasir-app');
 })->name('admin.kasir-app');
 
-Route::middleware('auth')->prefix($adminPath . '/pos-api')->group(function () {
+Route::middleware('auth')->prefix('admin/pos-api')->group(function () {
     Route::get('/menus', [PosController::class, 'menus']);
     Route::get('/tables', [PosController::class, 'tables']);
     Route::get('/orders/active', [PosController::class, 'activeOrders']);

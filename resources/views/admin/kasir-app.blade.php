@@ -12,15 +12,11 @@
 <body class="bg-gray-100">
     <script src="https://unpkg.com/html5-qrcode" defer></script>
 
-    @php
-        $adminPath = trim((string) env('ADMIN_PATH', 'secure-panel-9x7k2'), '/');
-    @endphp
-
     <div
         id="kasir-pos-react"
-        data-endpoint-base="{{ url('/' . $adminPath . '/pos-api') }}"
-        data-panel-url="{{ url('/' . $adminPath) }}"
-        data-login-url="{{ url('/' . $adminPath . '/login') }}"
+        data-endpoint-base="{{ url('/admin/pos-api') }}"
+        data-panel-url="{{ url('/admin') }}"
+        data-login-url="{{ url('/admin/login') }}"
         class="min-h-screen"
     ></div>
 </body>

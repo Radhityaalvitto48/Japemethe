@@ -27,12 +27,10 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
-        $adminPath = trim((string) env('ADMIN_PATH', 'secure-panel-9x7k2'), '/');
-
         return $panel
             ->default()
             ->id('admin')
-            ->path($adminPath)
+            ->path('admin')
             ->login()
             ->brandName('Japemethe')
             ->brandLogo(asset('storage/logo.webp'))
@@ -58,7 +56,7 @@ class AdminPanelProvider extends PanelProvider
                     ->group('Operasional')
                     ->icon('heroicon-o-computer-desktop')
                     ->sort(1)
-                    ->url(fn (): string => url('/' . $adminPath . '/kasir-app'))
+                    ->url(fn (): string => url('/admin/kasir-app'))
                     ->visible(fn (): bool => in_array(Auth::user()?->role, ['admin', 'kasir'], true)),
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')

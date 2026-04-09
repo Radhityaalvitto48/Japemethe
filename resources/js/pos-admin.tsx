@@ -924,9 +924,9 @@ function PosAdminApp({
 const mountElement = document.getElementById('kasir-pos-react');
 
 if (mountElement) {
-    const endpointBase = mountElement.getAttribute('data-endpoint-base') ?? '/secure-panel-9x7k2/pos-api';
-    const panelUrl = mountElement.getAttribute('data-panel-url') ?? '/secure-panel-9x7k2';
-    const loginUrl = mountElement.getAttribute('data-login-url') ?? '/secure-panel-9x7k2/login';
+    const endpointBase = mountElement.getAttribute('data-endpoint-base') ?? '/admin/pos-api';
+    const panelUrl = mountElement.getAttribute('data-panel-url') ?? '/admin';
+    const loginUrl = mountElement.getAttribute('data-login-url') ?? '/admin/login';
 
     createRoot(mountElement).render(
         <React.StrictMode>
