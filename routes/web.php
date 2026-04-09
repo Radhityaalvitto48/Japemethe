@@ -4,13 +4,26 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\PosController;
+use App\Models\Table;
 
 use Inertia\Inertia;
 
 Route::get('/', function () {
     return Inertia::render('Reservation');
 })->name('home');
-Route::get('/scan/{tableNumber}', [MenuController::class, 'scanTable'])->name('menu.scan');
+Route::get('/s/{scanHash}', [MenuController::class, 'scanTable'])
+    ->middleware('throttle:scan')
+    ->where('scanHash', '[A-Za-z0-9_-]{4,128}')
+    ->name('menu.scan');
+
+Route::get('/scan/{tableNumber}', function (string $tableNumber) {
+    $table = Table::query()
+        ->where('table_number', $tableNumber)
+        ->where('is_active', true)
+        ->firstOrFail();
+
+    return redirect()->route('menu.scan', ['scanHash' => Table::encodeScanToken($table->table_number)], 301);
+})->middleware('throttle:scan');
 Route::get('/cart', function () {
     return Inertia::render('Cart');
 })->name('cart');

@@ -45,7 +45,7 @@ class Table extends Model
             }
 
             // Generate dan simpan QR code langsung dalam format SVG
-            $url = url('/scan/' . $table->table_number);
+            $url = route('menu.scan', ['scanHash' => self::encodeScanToken($table->table_number)], true);
             $svg = QrCode::format('svg')->size(300)->generate($url);
             $filename = 'table-qr/' . $table->table_number . '.svg';
             Storage::disk('public')->put($filename, $svg);
@@ -73,5 +73,25 @@ class Table extends Model
     public function reservations()
     {
         return $this->hasMany(Reservation::class, 'id_table');
+    }
+
+    public static function encodeScanToken(string $tableNumber): string
+    {
+        return rtrim(strtr(base64_encode($tableNumber), '+/', '-_'), '=');
+    }
+
+    public static function decodeScanToken(string $token): ?string
+    {
+        $decoded = base64_decode(strtr($token, '-_', '+/') . str_repeat('=', (4 - strlen($token) % 4) % 4), true);
+
+        if ($decoded === false) {
+            return null;
+        }
+
+        if (! preg_match('/^(K|L)-\d+$/', $decoded)) {
+            return null;
+        }
+
+        return $decoded;
     }
 }

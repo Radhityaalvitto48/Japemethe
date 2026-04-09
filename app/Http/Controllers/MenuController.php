@@ -19,8 +19,12 @@ class MenuController extends \App\Http\Controllers\Controller
         return Inertia::render('Menu', $this->buildMenuPagePayload($request));
     }
 
-    public function scanTable(Request $request, string $tableNumber): Response
+    public function scanTable(Request $request, string $scanHash): Response
     {
+        $tableNumber = Table::decodeScanToken($scanHash);
+
+        abort_if(! is_string($tableNumber) || $tableNumber === '', 404);
+
         $table = Table::query()
             ->where('table_number', $tableNumber)
             ->where('is_active', true)
